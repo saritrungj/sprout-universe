@@ -6,7 +6,6 @@ import {
   LucideIcon,
 } from "lucide-react";
 import { AppState, Lang } from "../lib/store";
-import { getStreak, getDaysTended } from "../lib/status";
 import { useT } from "../lib/i18n";
 import LanguageSelect from "./LanguageSelect";
 import ThemeToggle from "./ThemeToggle";
@@ -40,8 +39,6 @@ export function SideNav({
   onChangeLanguage,
 }: ShellProps) {
   const { t } = useT();
-  const streak = getStreak(state);
-  const tended = getDaysTended(state);
 
   return (
     <nav
@@ -59,27 +56,6 @@ export function SideNav({
         <span className="font-sans text-lg font-bold text-sprout-700 dark:text-sprout-400">
           Sprout
         </span>
-      </div>
-
-      {/* Companion profile */}
-      <div className="mb-5 flex items-center gap-3 rounded-[1.35rem] border border-sprout-100 bg-surface p-3 dark:border-sprout-900 dark:bg-surface-dark">
-        <img
-          src={`/sprout-${state.settings.mascot}.png`}
-          alt=""
-          aria-hidden="true"
-          className="h-12 w-12 flex-shrink-0 object-contain"
-          style={{ animation: "streak-float 4.6s ease-in-out infinite" }}
-        />
-        <div className="min-w-0">
-          <p className="truncate text-sm font-bold text-ink dark:text-surface">
-            {streak.current > 0
-              ? t("headline.streak", { n: streak.current })
-              : t("today.streakStart")}
-          </p>
-          <p className="text-xs text-ink-subtle dark:text-surface-muted tabular-nums">
-            {tended} {t("settings.daysTended").toLowerCase()}
-          </p>
-        </div>
       </div>
 
       {/* Links */}

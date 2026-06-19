@@ -7,6 +7,7 @@ type Props = { cells: HeatmapCell[] };
 function cellColor(cell: HeatmapCell): string {
   const today = todayISO();
   if (cell.date > today) return "bg-surface-muted dark:bg-surface-dark-muted";
+  if (cell.status === "rest") return "bg-sky-200 dark:bg-sky-900";
   if (cell.status === "neutral") return "bg-surface-muted dark:bg-surface-dark-muted";
   if (cell.status === "missed") return "bg-red-200 dark:bg-red-900";
   if (cell.ratio === 0) return "bg-surface-muted dark:bg-surface-dark-muted";

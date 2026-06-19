@@ -12,6 +12,7 @@ import {
   getMonthStats,
   getHeatmapData,
   getDayStatus,
+  getGoalProgress,
 } from "../lib/status";
 import { exportDashboard, ExportRatio } from "../lib/export";
 import { useCountUp } from "../lib/useCountUp";
@@ -29,6 +30,11 @@ export default function Dashboard({ state }: Props) {
   const streak = getStreak(state);
   const stats = getMonthStats(state, month);
   const heatmap = getHeatmapData(state, 26);
+  const goals = getGoalProgress(state);
+  const recentNotes = Object.values(state.days)
+    .filter((log) => (log.note ?? "").trim())
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 3);
 
   // Today still pending? (drives the streak chain nudge)
   const todayStatus = getDayStatus(state, todayISO());
@@ -131,6 +137,69 @@ export default function Dashboard({ state }: Props) {
           <Heatmap cells={heatmap} />
         </div>
 
+        {goals.length > 0 && (
+          <section className="grid gap-3 lg:col-span-2 sm:grid-cols-2">
+            {goals.map((goal) => (
+              <div
+                key={goal.taskId}
+                className="rounded-2xl border border-sprout-100 bg-surface p-4 dark:border-sprout-950 dark:bg-surface-dark-muted"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-ink-subtle dark:text-surface-muted">
+                      {goal.type === "savings"
+                        ? t("goal.savings")
+                        : t("goal.weight")}
+                    </p>
+                    <h3 className="mt-1 text-sm font-bold text-ink dark:text-surface">
+                      {goal.title}
+                    </h3>
+                  </div>
+                  <p className="text-2xl font-bold tabular-nums text-sprout-600 dark:text-sprout-400">
+                    {goal.percent}%
+                  </p>
+                </div>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-sprout-100 dark:bg-sprout-950">
+                  <div
+                    className="h-full rounded-full bg-sprout-500"
+                    style={{ width: `${goal.percent}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-ink-muted dark:text-surface-muted tabular-nums">
+                  {goal.current} / {goal.target}{" "}
+                  {goal.type === "savings" ? t("goal.currency") : t("goal.kg")}
+                </p>
+                {goal.nextCheckDate && (
+                  <p className="mt-1 text-xs text-ink-subtle dark:text-surface-muted">
+                    {t("goal.nextCheck", { date: goal.nextCheckDate })}
+                  </p>
+                )}
+              </div>
+            ))}
+          </section>
+        )}
+
+        {recentNotes.length > 0 && (
+          <section className="rounded-2xl border border-sprout-100 bg-surface p-4 dark:border-sprout-950 dark:bg-surface-dark-muted lg:col-span-2">
+            <h3 className="text-xs font-medium uppercase tracking-wide text-ink-subtle dark:text-surface-muted">
+              {t("note.recent")}
+            </h3>
+            <div className="mt-3 grid gap-2">
+              {recentNotes.map((log) => (
+                <div
+                  key={log.date}
+                  className="rounded-xl bg-surface-muted px-3 py-2 text-sm text-ink dark:bg-surface-dark dark:text-surface"
+                >
+                  <span className="mr-2 font-bold tabular-nums text-sprout-700 dark:text-sprout-300">
+                    {log.date}
+                  </span>
+                  {log.note}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {!zen && <StreakCard streak={streak} todayPending={todayPending} />}
 
         {/* Mini month calendar */}
@@ -222,6 +291,8 @@ function MiniMonthSummary({
                 ${
                   status === "complete"
                     ? "bg-sprout-500 text-white"
+                    : status === "rest"
+                      ? "bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300"
                     : status === "missed"
                       ? "bg-red-100 dark:bg-red-950 text-red-600 dark:text-red-400"
                       : status === "in-progress"

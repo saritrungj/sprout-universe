@@ -12,6 +12,7 @@ const STROKE: Record<DayStatus, string> = {
   "in-progress": "#fbbf24",
   missed: "#f87171",
   neutral: "#cbd5d0",
+  rest: "#7dd3fc",
 };
 
 /**

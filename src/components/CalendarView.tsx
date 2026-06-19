@@ -3,6 +3,8 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Lock,
+  Moon,
   MoreHorizontal,
   X,
 } from "lucide-react";
@@ -81,6 +83,17 @@ function DayStamp({
     );
   }
 
+  if (status === "rest") {
+    return (
+      <div
+        className={`${base} ${st.stamp} ${isToday ? "ring-2 ring-sky-300" : ""}`}
+        aria-hidden="true"
+      >
+        <Moon size={15} strokeWidth={3} aria-hidden="true" />
+      </div>
+    );
+  }
+
   return <div className={`${base} ${todayRing}`} aria-hidden="true" />;
 }
 
@@ -97,6 +110,7 @@ export default function CalendarView({ state, setState }: Props) {
     complete: t("cal.complete"),
     missed: t("cal.missed"),
     "in-progress": t("cal.inProgress"),
+    rest: t("status.rest"),
     neutral: "",
   };
 
@@ -154,6 +168,7 @@ export default function CalendarView({ state, setState }: Props) {
                   return <div key={di} role="gridcell" aria-hidden="true" />;
                 }
                 const status = getDayStatus(state, date);
+                const isFuture = date > today;
                 const dayNum = parseInt(date.slice(8));
                 const statusText = statusName[status]
                   ? `, ${statusName[status]}`
@@ -164,17 +179,23 @@ export default function CalendarView({ state, setState }: Props) {
                       data-flat
                       onClick={() => setSelected(date)}
                       aria-label={`${date === today ? t("day.today") + ", " : ""}${date}${statusText}`}
-                      className="w-full flex flex-col items-center gap-1 p-1 rounded-xl hover:bg-sprout-50 dark:hover:bg-sprout-950 transition-colors"
+                      className={`w-full flex flex-col items-center gap-1 p-1 rounded-xl transition-colors ${
+                        isFuture
+                          ? "text-ink-subtle hover:bg-surface-muted dark:hover:bg-surface-dark"
+                          : "hover:bg-sprout-50 dark:hover:bg-sprout-950"
+                      }`}
                     >
                       <span
                         className={`text-xs font-medium ${
                           date === today
                             ? "text-sprout-600 dark:text-sprout-400 font-bold"
-                            : "text-ink-muted dark:text-surface-muted"
+                            : isFuture
+                              ? "text-ink-subtle dark:text-surface-muted"
+                              : "text-ink-muted dark:text-surface-muted"
                         }`}
                         aria-hidden="true"
                       >
-                        {dayNum}
+                        {isFuture ? <Lock size={11} /> : dayNum}
                       </span>
                       <DayStamp status={status} date={date} today={today} />
                     </button>
@@ -197,6 +218,7 @@ export default function CalendarView({ state, setState }: Props) {
             className="bg-amber-100 dark:bg-amber-950"
             label={t("cal.inProgress")}
           />
+          <LegendDot className="bg-sky-100 dark:bg-sky-950" label={t("status.rest")} />
         </div>
       </section>
 
@@ -228,6 +250,10 @@ export default function CalendarView({ state, setState }: Props) {
           <LegendDot
             className="bg-red-100 dark:bg-red-950"
             label={t("cal.missed")}
+          />
+          <LegendDot
+            className="bg-sky-100 dark:bg-sky-950"
+            label={t("status.rest")}
           />
         </div>
       </aside>

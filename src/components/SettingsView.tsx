@@ -39,6 +39,8 @@ export default function SettingsView({ state, setState }: Props) {
   const tended = getDaysTended(state);
   const [notifState, setNotifState] =
     useState<NotificationPermission>(notifPermission());
+  // Bump to replay the companion's hop animation on tap.
+  const [playKey, setPlayKey] = useState(0);
 
   async function toggleReminders() {
     if (!settings.reminders.enabled) {
@@ -168,21 +170,39 @@ export default function SettingsView({ state, setState }: Props) {
         {/* Right column */}
         <div className="flex flex-col gap-6">
           {/* Companion picker */}
-          <div className="rounded-2xl border border-sprout-100 bg-sprout-50 p-5 dark:border-sprout-900 dark:bg-sprout-950/40">
+          <div className="overflow-hidden rounded-2xl border border-sprout-100 bg-gradient-to-b from-sprout-50 to-surface p-5 dark:border-sprout-900 dark:from-sprout-950/50 dark:to-surface-dark-muted">
             <div className="flex flex-col items-center text-center">
-              <img
-                src={`/sprout-${settings.mascot}.png`}
-                alt=""
-                aria-hidden="true"
-                decoding="async"
-                className="h-28 w-28 object-contain drop-shadow-[0_14px_24px_rgba(22,101,52,0.18)]"
-                style={{ animation: "streak-float 4.6s ease-in-out infinite" }}
-              />
+              {/* Tap the buddy to make it hop */}
+              <button
+                type="button"
+                onClick={() => setPlayKey((k) => k + 1)}
+                aria-label={t("settings.companionPlay")}
+                title={t("settings.companionPlay")}
+                className="group relative rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-sprout-400 focus-visible:ring-offset-2 focus-visible:ring-offset-sprout-50 dark:focus-visible:ring-offset-surface-dark-muted"
+              >
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-x-2 bottom-3 -z-10 h-4 rounded-full bg-sprout-300/30 blur-xl dark:bg-sprout-600/25"
+                />
+                <span
+                  className="block"
+                  style={{ animation: "streak-float 4.6s ease-in-out infinite" }}
+                >
+                  <img
+                    key={`${settings.mascot}-${playKey}`}
+                    src={`/sprout-${settings.mascot}.png`}
+                    alt=""
+                    aria-hidden="true"
+                    decoding="async"
+                    className="animate-hop h-28 w-28 object-contain drop-shadow-[0_14px_24px_rgba(22,101,52,0.18)] transition-transform duration-200 group-hover:scale-105 group-active:scale-95"
+                  />
+                </span>
+              </button>
               <h2 className="mt-2 text-base font-bold text-sprout-800 dark:text-sprout-200">
-                {t("settings.companion")}
+                {t(`mascot.${settings.mascot}`)}
               </h2>
               <p className="mt-1 text-xs text-ink-muted dark:text-surface-muted">
-                {t("settings.companionDesc")}
+                {t("settings.companionPlay")}
               </p>
             </div>
             <div className="mt-4 grid grid-cols-4 gap-2">
@@ -195,20 +215,23 @@ export default function SettingsView({ state, setState }: Props) {
                     aria-pressed={selected}
                     aria-label={t(`mascot.${key}`)}
                     title={t(`mascot.${key}`)}
-                    className={`flex aspect-square items-center justify-center rounded-xl border p-1 transition-all
+                    className={`group flex aspect-square items-center justify-center rounded-xl border p-1 transition-all duration-200 hover:-translate-y-0.5 active:scale-95
                       ${
                         selected
                           ? "border-sprout-400 bg-surface ring-2 ring-sprout-300 dark:border-sprout-600 dark:bg-surface-dark dark:ring-sprout-700"
-                          : "border-transparent bg-surface/60 hover:bg-surface dark:bg-surface-dark/40 dark:hover:bg-surface-dark"
+                          : "border-transparent bg-surface/60 hover:bg-surface hover:shadow-sm dark:bg-surface-dark/40 dark:hover:bg-surface-dark"
                       }`}
                   >
                     <img
+                      key={selected ? `sel-${key}` : key}
                       src={`/sprout-${key}.png`}
                       alt=""
                       aria-hidden="true"
                       loading="lazy"
                       decoding="async"
-                      className="h-full w-full object-contain"
+                      className={`h-full w-full object-contain transition-transform duration-200 group-hover:scale-110 ${
+                        selected ? "animate-wiggle" : ""
+                      }`}
                     />
                   </button>
                 );
@@ -324,12 +347,14 @@ function Toggle({
       aria-checked={checked}
       aria-label={label}
       onClick={() => onChange(!checked)}
-      className={`relative h-7 w-12 flex-shrink-0 rounded-full transition-colors duration-300 ${
-        checked ? "bg-sprout-500" : "bg-surface-muted dark:bg-surface-dark-muted"
+      className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full border transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-sprout-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface dark:focus-visible:ring-offset-surface-dark ${
+        checked
+          ? "border-sprout-500 bg-sprout-500"
+          : "border-sprout-200 bg-sprout-100 dark:border-sprout-700 dark:bg-surface-dark"
       }`}
     >
       <span
-        className={`absolute top-1 h-5 w-5 rounded-full bg-surface shadow-sm transition-transform duration-300 dark:bg-surface-muted ${
+        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-1 ring-black/10 transition-transform duration-300 ${
           checked ? "translate-x-6" : "translate-x-1"
         }`}
       />

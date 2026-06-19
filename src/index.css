@@ -220,6 +220,180 @@
     }
   }
 
+  /* Pop-in for popovers and cards */
+  .animate-pop-in {
+    animation: pop-in 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  /* Staggered rise for list items — set --i to the index for the delay */
+  .animate-rise {
+    opacity: 0;
+    animation: rise-in 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation-delay: calc(var(--i, 0) * 60ms);
+  }
+
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Playful hop — fires once when the companion changes or is tapped */
+  .animate-hop {
+    animation: mascot-hop 0.62s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @keyframes mascot-hop {
+    0% {
+      transform: translateY(0) scale(1);
+    }
+    28% {
+      transform: translateY(-20px) scale(1.07, 0.95);
+    }
+    52% {
+      transform: translateY(0) scale(0.96, 1.04);
+    }
+    74% {
+      transform: translateY(-7px) scale(1.02, 0.99);
+    }
+    100% {
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  /* Quick wiggle for companion thumbnails on selection */
+  .animate-wiggle {
+    animation: wiggle 0.5s ease-in-out;
+  }
+
+  @keyframes wiggle {
+    0%,
+    100% {
+      transform: rotate(0deg);
+    }
+    25% {
+      transform: rotate(-8deg);
+    }
+    75% {
+      transform: rotate(8deg);
+    }
+  }
+
+  /* Gentle pulse for the AI sparkle icon */
+  .animate-sparkle {
+    animation: sparkle-pulse 2.6s ease-in-out infinite;
+  }
+
+  /* Day-complete celebration — happy mascot + radiant power glow.
+     Continuous bob uses ease-in-out (matches .streak-float), not a bounce. */
+  .complete-cheer {
+    animation: complete-cheer 1.8s ease-in-out infinite;
+  }
+
+  @keyframes complete-cheer {
+    0%,
+    100% {
+      transform: translateY(0) rotate(-2.5deg);
+    }
+    50% {
+      transform: translateY(-9px) rotate(2.5deg);
+    }
+  }
+
+  .complete-aura {
+    animation: complete-aura 2.4s ease-in-out infinite;
+  }
+
+  @keyframes complete-aura {
+    0%,
+    100% {
+      opacity: 0.45;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.9;
+      transform: scale(1.14);
+    }
+  }
+
+  .complete-rays {
+    animation: complete-spin 9s linear infinite;
+  }
+
+  @keyframes complete-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Inviting AI button — breathing glow + shimmer sweep */
+  .btn-ai-glow {
+    animation: ai-glow 2.8s ease-in-out infinite;
+  }
+
+  @keyframes ai-glow {
+    0%,
+    100% {
+      box-shadow:
+        0 12px 30px rgba(22, 101, 52, 0.28),
+        0 0 0 0 rgba(34, 197, 94, 0);
+    }
+    50% {
+      box-shadow:
+        0 16px 38px rgba(22, 101, 52, 0.4),
+        0 0 22px 2px rgba(34, 197, 94, 0.5);
+    }
+  }
+
+  .ai-shimmer {
+    background: linear-gradient(
+      110deg,
+      transparent 35%,
+      rgba(255, 255, 255, 0.5) 50%,
+      transparent 65%
+    );
+    transform: translateX(-120%);
+    animation: ai-shimmer 2.8s ease-in-out infinite;
+  }
+
+  @keyframes ai-shimmer {
+    0% {
+      transform: translateX(-120%);
+    }
+    55%,
+    100% {
+      transform: translateX(120%);
+    }
+  }
+
+  @keyframes sparkle-pulse {
+    0%,
+    100% {
+      transform: scale(1) rotate(0deg);
+      opacity: 0.85;
+    }
+    50% {
+      transform: scale(1.16) rotate(8deg);
+      opacity: 1;
+    }
+  }
+
   .sr-only {
     position: absolute;
     width: 1px;

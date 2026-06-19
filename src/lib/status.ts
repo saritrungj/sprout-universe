@@ -1,7 +1,19 @@
-import { AppState, getDayLog, getDayTaskIds } from "./store";
+import {
+  AppState,
+  GoalType,
+  Task,
+  getDayLog,
+  getDayTaskIds,
+  isFutureDate,
+} from "./store";
 import { todayISO, buildHeatmapDates, buildMonthGrid } from "./dates";
 
-export type DayStatus = "complete" | "missed" | "in-progress" | "neutral";
+export type DayStatus =
+  | "complete"
+  | "missed"
+  | "in-progress"
+  | "neutral"
+  | "rest";
 
 /** Single source of truth for status → Tailwind class mappings. */
 export const statusStyles = {
@@ -41,15 +53,25 @@ export const statusStyles = {
     badge: "bg-surface-muted dark:bg-surface-dark-muted text-ink-muted",
     stamp: "",
   },
+  rest: {
+    bg: "bg-sky-200 dark:bg-sky-900",
+    bgLight: "bg-sky-50 dark:bg-sky-950",
+    border: "border-sky-200 dark:border-sky-800",
+    ring: "ring-2 ring-sky-300 dark:ring-sky-700",
+    text: "text-sky-700 dark:text-sky-300",
+    badge: "bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300",
+    stamp: "bg-sky-100 dark:bg-sky-950 text-sky-600 dark:text-sky-300",
+  },
 } satisfies Record<DayStatus, Record<string, string>>;
 
 export function getDayStatus(state: AppState, date: string): DayStatus {
   const today = todayISO();
+  const log = getDayLog(state, date);
+  if (log.skipped) return "rest";
   const taskIds = getDayTaskIds(state, date);
   if (taskIds.length === 0) return "neutral";
   if (date > today) return "neutral";
 
-  const log = getDayLog(state, date);
   const allDone = taskIds.every((id) => log.done[id]);
 
   if (allDone) return "complete";
@@ -58,6 +80,7 @@ export function getDayStatus(state: AppState, date: string): DayStatus {
 }
 
 export function getCompletionRatio(state: AppState, date: string): number {
+  if (getDayLog(state, date).skipped) return 0;
   const taskIds = getDayTaskIds(state, date);
   if (taskIds.length === 0) return 0;
   const log = getDayLog(state, date);
@@ -81,6 +104,9 @@ export function getStreak(state: AppState): StreakInfo {
     if (status === "complete") {
       streak++;
       if (streak > best) best = streak;
+    } else if (status === "rest") {
+      d.setDate(d.getDate() - 1);
+      continue;
     } else if (status === "in-progress" && dateStr === today) {
       // today not yet done — still counts toward potential streak
       d.setDate(d.getDate() - 1);
@@ -100,6 +126,10 @@ export function getStreak(state: AppState): StreakInfo {
   let prev = "";
   for (const date of allDates) {
     const status = getDayStatus(state, date);
+    if (status === "rest") {
+      prev = date;
+      continue;
+    }
     if (status === "complete") {
       if (prev) {
         const prevD = new Date(prev);
@@ -130,6 +160,7 @@ export type MonthStats = {
   greenDays: number;
   totalDays: number;
   tasksCompleted: number;
+  restDays: number;
 };
 
 export function getMonthStats(state: AppState, month: string): MonthStats {
@@ -140,8 +171,13 @@ export function getMonthStats(state: AppState, month: string): MonthStats {
     .filter((d): d is string => d !== null && d <= today);
   let green = 0,
     tasksCompleted = 0,
-    counted = 0;
+    counted = 0,
+    restDays = 0;
   for (const date of dates) {
+    if (getDayLog(state, date).skipped) {
+      restDays++;
+      continue;
+    }
     const taskIds = getDayTaskIds(state, date);
     if (taskIds.length === 0) continue;
     counted++;
@@ -155,6 +191,7 @@ export function getMonthStats(state: AppState, month: string): MonthStats {
     greenDays: green,
     totalDays: counted,
     tasksCompleted,
+    restDays,
   };
 }
 
@@ -165,12 +202,115 @@ export function getDaysTended(state: AppState): number {
   ).length;
 }
 
-export type HeatmapCell = { date: string; ratio: number; status: DayStatus };
+export type HeatmapCell = {
+  date: string;
+  ratio: number;
+  status: DayStatus;
+  counted?: boolean;
+};
 
 export function getHeatmapData(state: AppState, weeks = 26): HeatmapCell[] {
-  return buildHeatmapDates(weeks).map((date) => ({
-    date,
-    ratio: getCompletionRatio(state, date),
-    status: getDayStatus(state, date),
-  }));
+  return getConsistencyData(state, weeks);
 }
+
+export function isFutureDateStatus(date: string): boolean {
+  return isFutureDate(date);
+}
+
+export function getConsistencyData(
+  state: AppState,
+  weeks = 26,
+): HeatmapCell[] {
+  return buildHeatmapDates(weeks).map((date) => {
+    const status = getDayStatus(state, date);
+    const taskIds = getDayTaskIds(state, date);
+    const counted =
+      !isFutureDate(date) && status !== "rest" && taskIds.length > 0;
+    return {
+      date,
+      ratio: counted ? getCompletionRatio(state, date) : 0,
+      status,
+      counted,
+    };
+  });
+}
+
+export type GoalProgress = {
+  taskId: string;
+  title: string;
+  type: GoalType;
+  current: number;
+  target: number;
+  percent: number;
+  latestDate?: string;
+  nextCheckDate?: string;
+};
+
+export function getGoalProgress(state: AppState): GoalProgress[] {
+  return Object.values(state.tasks)
+    .filter(
+      (task): task is Task & {
+        goalType: GoalType;
+        goalConfig: { target: number; checkEveryDays?: number };
+      } =>
+        !!task.goalType && !!task.goalConfig,
+    )
+    .map((task) => {
+      const entries = Object.values(state.days)
+        .filter((log) => !isFutureDate(log.date))
+        .flatMap((log) => {
+          const value = log.goalEntries?.[task.id];
+          return typeof value === "number" ? [{ date: log.date, value }] : [];
+        })
+        .sort((a, b) => a.date.localeCompare(b.date));
+      const target = task.goalConfig?.target ?? 0;
+      if (task.goalType === "savings") {
+        const current = entries.reduce((sum, entry) => sum + entry.value, 0);
+        return {
+          taskId: task.id,
+          title: task.title,
+          type: task.goalType,
+          current,
+          target,
+          percent:
+            target > 0
+              ? Math.min(100, Math.round((current / target) * 100))
+              : 0,
+          latestDate: entries[entries.length - 1]?.date,
+        };
+      }
+
+      const latest = entries[entries.length - 1];
+      const checkEveryDays =
+        "checkEveryDays" in task.goalConfig
+          ? task.goalConfig.checkEveryDays
+          : undefined;
+      return {
+        taskId: task.id,
+        title: task.title,
+        type: task.goalType,
+        current: latest?.value ?? 0,
+        target,
+        percent:
+          target > 0 && latest?.value
+            ? Math.min(100, Math.round((target / latest.value) * 100))
+            : 0,
+        latestDate: latest?.date,
+        nextCheckDate:
+          latest && checkEveryDays
+            ? addDaysISO(latest.date, checkEveryDays)
+            : undefined,
+      };
+    });
+}
+
+function addDaysISO(date: string, days: number): string {
+  const [year, month, day] = date.split("-").map(Number);
+  const next = new Date(year, month - 1, day + days);
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(
+    2,
+    "0",
+  )}-${String(next.getDate()).padStart(2, "0")}`;
+}
+
+export { isFutureDate };

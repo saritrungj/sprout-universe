@@ -1,0 +1,8 @@
+# Local environment — keep API keys out of git
+.env
+.env.local
+.env.*.local
+
+# Build / tooling
+node_modules/.vite/
+.tmp/

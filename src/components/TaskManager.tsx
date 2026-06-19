@@ -3,11 +3,7 @@ import { Plus, Trash2 } from "lucide-react";
 import {
   AppState,
   addTask,
-  addMainTask,
-  removeMainTask,
-  getMonthPlan,
 } from "../lib/store";
-import { currentMonth } from "../lib/dates";
 import { useT } from "../lib/i18n";
 
 type Props = {
@@ -22,20 +18,30 @@ export default function TaskManager({
   embedded = false,
 }: Props) {
   const { t } = useT();
-  const month = currentMonth();
-  const plan = getMonthPlan(state, month);
+  const templateIds = state.templates ?? [];
   const [newTitle, setNewTitle] = useState("");
 
   function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!newTitle.trim()) return;
-    const [s2, id] = addTask(state, newTitle.trim());
-    setState(addMainTask(s2, month, id));
+    const duplicate = templateIds.some(
+      (id) =>
+        state.tasks[id]?.title.trim().toLocaleLowerCase() ===
+        newTitle.trim().toLocaleLowerCase(),
+    );
+    if (duplicate) return;
+    const [s2, id] = addTask(state, newTitle.trim(), undefined, {
+      isTemplate: true,
+    });
+    setState({ ...s2, templates: [...new Set([...(s2.templates ?? []), id])] });
     setNewTitle("");
   }
 
   function handleRemove(taskId: string) {
-    setState(removeMainTask(state, month, taskId));
+    setState({
+      ...state,
+      templates: (state.templates ?? []).filter((id) => id !== taskId),
+    });
   }
 
   return (
@@ -52,13 +58,13 @@ export default function TaskManager({
         </h3>
       )}
 
-      {plan.mainTaskIds.length === 0 && (
+      {templateIds.length === 0 && (
         <p className="text-xs text-ink-subtle dark:text-surface-muted">
           {t("taskmgr.empty")}
         </p>
       )}
 
-      {plan.mainTaskIds.map((id) => {
+      {templateIds.map((id) => {
         const task = state.tasks[id];
         if (!task) return null;
         return (

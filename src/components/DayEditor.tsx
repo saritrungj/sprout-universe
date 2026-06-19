@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { X, Plus, Check } from "lucide-react";
+import { X, Plus, Check, Moon } from "lucide-react";
 import {
   AppState,
   getDayTaskIds,
   getDayLog,
   setTaskDone,
-  addTask,
-  addAddonTask,
+  addDayTask,
+  removeDayTask,
+  setDayNote,
+  setDaySkipped,
+  setGoalEntry,
 } from "../lib/store";
 import { formatDayLabel, todayISO } from "../lib/dates";
 import { getDayStatus, statusStyles } from "../lib/status";
@@ -26,6 +29,7 @@ export default function DayEditor({ date, state, setState, onClose }: Props) {
   const status = getDayStatus(state, date);
   const today = todayISO();
   const isFuture = date > today;
+  const skipped = !!log.skipped;
   const [newTask, setNewTask] = useState("");
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -75,14 +79,16 @@ export default function DayEditor({ date, state, setState, onClose }: Props) {
   }, [onClose]);
 
   function toggle(taskId: string) {
+    if (isFuture || skipped) return;
     setState(setTaskDone(state, date, taskId, !log.done[taskId]));
   }
 
   function handleAdd(e: React.FormEvent) {
     e.preventDefault();
-    if (!newTask.trim()) return;
-    const [s2, id] = addTask(state, newTask.trim());
-    setState(addAddonTask(s2, date, id));
+    if (!newTask.trim() || isFuture) return;
+    const [nextState, id] = addDayTask(state, date, newTask.trim());
+    if (!id) return;
+    setState(nextState);
     setNewTask("");
   }
 
@@ -90,6 +96,8 @@ export default function DayEditor({ date, state, setState, onClose }: Props) {
   const statusMascot =
     status === "complete"
       ? "/sprout-success.png"
+      : status === "rest"
+        ? "/sprout-rest.png"
       : status === "missed"
         ? "/sprout-fail.png"
         : status === "in-progress"
@@ -100,6 +108,8 @@ export default function DayEditor({ date, state, setState, onClose }: Props) {
   const statusLabel =
     status === "complete"
       ? t("status.done")
+      : status === "rest"
+        ? t("status.rest")
       : status === "in-progress"
         ? t("status.inProgress")
         : status === "missed"
@@ -170,18 +180,60 @@ export default function DayEditor({ date, state, setState, onClose }: Props) {
 
         {/* Tasks */}
         <div className="flex flex-col gap-2">
-          {taskIds.length === 0 && (
+          {isFuture && (
+            <p className="rounded-2xl border border-sprout-100 bg-surface-muted px-4 py-5 text-center text-sm font-medium text-ink-subtle dark:border-sprout-900 dark:bg-surface-dark dark:text-surface-muted">
+              {t("day.futureLocked")}
+            </p>
+          )}
+          {!isFuture && (
+            <button
+              type="button"
+              onClick={() => setState(setDaySkipped(state, date, !skipped))}
+              className={`inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border px-4 py-2 text-sm font-bold transition-colors ${
+                skipped
+                  ? "border-sky-300 bg-sky-100 text-sky-700 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-300"
+                  : "border-sprout-100 bg-surface text-ink-muted hover:border-sky-300 hover:text-sky-700 dark:border-sprout-900 dark:bg-surface-dark dark:text-surface-muted dark:hover:text-sky-300"
+              }`}
+              aria-pressed={skipped}
+            >
+              <Moon size={16} aria-hidden="true" />
+              {skipped ? t("today.resting") : t("today.skipRest")}
+            </button>
+          )}
+          {!isFuture && (
+            <label className="flex flex-col gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-ink-subtle dark:text-surface-muted">
+                {t("note.title")}
+              </span>
+              <textarea
+                value={log.note ?? ""}
+                onChange={(e) =>
+                  setState(setDayNote(state, date, e.target.value))
+                }
+                placeholder={t("note.placeholder")}
+                rows={3}
+                className="resize-none rounded-2xl border border-sprout-100 bg-surface-muted px-3 py-2 text-sm text-ink placeholder-ink-subtle focus:border-sprout-400 dark:border-sprout-900 dark:bg-surface-dark dark:text-surface dark:placeholder-surface-muted"
+              />
+            </label>
+          )}
+          {!isFuture && skipped && (
+            <p className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-5 text-center text-sm font-semibold text-sky-700 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-300">
+              {t("today.restMessage")}
+            </p>
+          )}
+          {!isFuture && !skipped && taskIds.length === 0 && (
             <p className="text-sm text-ink-subtle dark:text-surface-muted py-4 text-center">
               {t("day.empty")}
             </p>
           )}
-          {taskIds.map((id) => {
+          {!isFuture && !skipped && taskIds.map((id) => {
             const task = state.tasks[id];
             if (!task) return null;
             const isDone = !!log.done[id];
             return (
+              <div key={id} className="flex flex-col gap-2 rounded-xl border border-sprout-100 bg-surface p-2 dark:border-sprout-900 dark:bg-surface-dark">
+              <div className="flex items-stretch gap-2">
               <button
-                key={id}
                 onClick={() => toggle(id)}
                 aria-pressed={isDone}
                 aria-label={t(isDone ? "task.unmark" : "task.mark", {
@@ -211,12 +263,40 @@ export default function DayEditor({ date, state, setState, onClose }: Props) {
                   {task.title}
                 </span>
               </button>
+              <button
+                onClick={() => setState(removeDayTask(state, date, id))}
+                aria-label={t("today.removeAria", { title: task.title })}
+                className="flex min-h-[44px] w-11 flex-shrink-0 items-center justify-center rounded-xl text-ink-subtle transition-colors hover:bg-red-50 hover:text-red-500 dark:text-surface-muted dark:hover:bg-red-950 dark:hover:text-red-400"
+              >
+                <X size={15} aria-hidden="true" />
+              </button>
+              </div>
+              {task.goalType && (
+                <label className="flex items-center gap-2 px-1 pb-1 text-xs text-ink-subtle dark:text-surface-muted">
+                  {task.goalType === "savings"
+                    ? t("goal.savedToday")
+                    : t("goal.weightToday")}
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={log.goalEntries?.[id] ?? ""}
+                    onChange={(e) =>
+                      setState(setGoalEntry(state, date, id, Number(e.target.value)))
+                    }
+                    className="min-h-[40px] w-28 rounded-xl border border-sprout-100 bg-surface-muted px-3 py-2 text-sm text-ink dark:border-sprout-900 dark:bg-surface-dark dark:text-surface"
+                  />
+                  <span>
+                    {task.goalType === "savings" ? t("goal.currency") : t("goal.kg")}
+                  </span>
+                </label>
+              )}
+              </div>
             );
           })}
         </div>
 
         {/* Add task */}
-        <form onSubmit={handleAdd} className="flex gap-2">
+        {!isFuture && !skipped && <form onSubmit={handleAdd} className="flex gap-2">
           <input
             value={newTask}
             onChange={(e) => setNewTask(e.target.value)}
@@ -231,7 +311,7 @@ export default function DayEditor({ date, state, setState, onClose }: Props) {
           >
             <Plus size={16} aria-hidden="true" />
           </button>
-        </form>
+        </form>}
       </div>
       </div>
     </>

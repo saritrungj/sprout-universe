@@ -1,5 +1,12 @@
-import { useState, useEffect } from "react";
-import { AppState, defaultState } from "./store";
+import { useEffect, useState } from "react";
+import {
+  AppState,
+  DayLog,
+  defaultState,
+  getDayLog,
+  getMonthPlan,
+} from "./store";
+import { currentMonth, todayISO } from "./dates";
 
 const KEY = "sprout-planner:v1";
 
@@ -8,15 +15,61 @@ export function loadState(): AppState {
     const raw = localStorage.getItem(KEY);
     if (!raw) return defaultState;
     const parsed = JSON.parse(raw);
-    return {
+    return migrateState({
       ...defaultState,
       ...parsed,
-      // settings is nested — deep-merge so new keys (e.g. language) get defaults
-      settings: { ...defaultState.settings, ...(parsed.settings ?? {}) },
-    };
+      settings: {
+        ...defaultState.settings,
+        ...(parsed.settings ?? {}),
+        ai: {
+          ...defaultState.settings.ai,
+          ...(parsed.settings?.ai ?? {}),
+        },
+      },
+    });
   } catch {
     return defaultState;
   }
+}
+
+export function migrateState(raw: AppState): AppState {
+  const templates = [
+    ...new Set([
+      ...(raw.templates ?? []),
+      ...Object.values(raw.months ?? {}).flatMap((plan) => plan.mainTaskIds),
+    ]),
+  ].filter((id) => !!raw.tasks[id]);
+
+  const tasks = { ...raw.tasks };
+  for (const id of templates) {
+    tasks[id] = { ...tasks[id], isTemplate: true };
+  }
+
+  const days: Record<string, DayLog> = {};
+  for (const [date, log] of Object.entries(raw.days ?? {})) {
+    const monthPlan = getMonthPlan(raw, date.slice(0, 7));
+    days[date] = {
+      ...getDayLog({ ...raw, days: {} }, date),
+      ...log,
+      taskIds: log.taskIds ?? [
+        ...new Set([...monthPlan.mainTaskIds, ...(log.addonTaskIds ?? [])]),
+      ],
+      goalEntries: log.goalEntries ?? {},
+      note: log.note ?? "",
+      skipped: log.skipped ?? false,
+    };
+  }
+
+  const today = todayISO();
+  const currentPlan = getMonthPlan(raw, currentMonth());
+  if (!days[today] && currentPlan.mainTaskIds.length > 0) {
+    days[today] = {
+      ...getDayLog({ ...raw, days: {} }, today),
+      taskIds: [...new Set(currentPlan.mainTaskIds)],
+    };
+  }
+
+  return { ...raw, tasks, days, templates };
 }
 
 export function saveState(state: AppState): void {
@@ -30,7 +83,6 @@ export function useAppState() {
     saveState(state);
   }, [state]);
 
-  // Apply theme class to <html>
   useEffect(() => {
     const root = document.documentElement;
     if (state.settings.theme === "dark") {
@@ -40,7 +92,6 @@ export function useAppState() {
     }
   }, [state.settings.theme]);
 
-  // Reflect the active language on <html lang>
   useEffect(() => {
     document.documentElement.lang = state.settings.language;
   }, [state.settings.language]);
