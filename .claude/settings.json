@@ -1,0 +1,45 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo \"started, pid $!\")",
+      "Bash(node smoke.mjs)",
+      "Bash(npx playwright *)",
+      "Bash(node shot.mjs)",
+      "Bash(rm -rf src/components/three icon-preview.html icon-preview.png shot.mjs smoke.mjs shot-*.png)",
+      "Bash(npm uninstall *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:4319/)",
+      "Bash(rm -f smoke.mjs shot-*.png; git status --short 2>&1 | head -40)",
+      "Bash(npm run *)",
+      "Bash(pkill -f \"vite preview\")",
+      "Bash(node .agents/skills/impeccable/scripts/load-context.mjs)",
+      "Bash(npx tsc *)",
+      "Bash(python \"C:/Users/suth-admin/.claude/skills/webapp-testing/scripts/with_server.py\" --server \"npm run dev\" --port 5173 -- python scripts/shoot_today.py)",
+      "Bash(python \"C:/Users/suth-admin/.claude/skills/webapp-testing/scripts/with_server.py\" --server \"npm run dev\" --port 5173 -- python scripts/debug_today.py)",
+      "Bash(npx esbuild *)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(curl -s -o /dev/null -w \"5173 status: %{http_code}\\\\n\" http://localhost:5173)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:5199)",
+      "Bash(sed -i 's|http://localhost:5173|http://localhost:5199|' scripts/shoot_today.py)",
+      "Bash(python \"C:/Users/suth-admin/.claude/skills/webapp-testing/scripts/with_server.py\" --server \"npm run dev -- --port 5199 --strictPort\" --port 5199 -- python scripts/shoot_today.py)",
+      "Bash(find /tmp /c/Users/suth-admin/AppData/Local/Temp -maxdepth 2 -iname \"*.png\" -newermt \"-30 minutes\" 2>/dev/null | head; echo \"---downloads---\"; ls -lt /c/Users/suth-admin/Downloads/*.png 2>/dev/null | head -5)",
+      "Read(//c/Users/suth-admin/AppData/Local/Temp/**)",
+      "Read(//c/Users/suth-admin/Downloads/**)",
+      "Bash(awk '{print $5, $9, $10, $11, $12, $13}')",
+      "Bash(python scripts/make_favicons.py)",
+      "Bash(awk '{print $5, $9}')",
+      "Bash(sed -i 's#DL = \"/c/Users/suth-admin/Downloads/\"#DL = \"C:/Users/suth-admin/Downloads/\"#' scripts/process_mascots.py)",
+      "Bash(python scripts/process_mascots.py)",
+      "Bash(python scripts/regen_favicons.py)",
+      "Bash(python scripts/contact.py)",
+      "Bash(xargs -n1 basename)",
+      "Bash(python scripts/icon512.py)",
+      "Bash(python \"C:/Users/suth-admin/.claude/skills/webapp-testing/scripts/with_server.py\" --server \"npm run preview -- --port 5200 --strictPort\" --port 5200 -- python scripts/verify_pwa.py)",
+      "Read(//c/Users/suth-admin/.claude/skills/impeccable/reference/**)",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('DESIGN.json','utf8'\\)\\); console.log\\('DESIGN.json valid'\\)\")",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);console.log\\('hasDesign:',j.hasDesign,'| designPath:',j.designPath\\)}\\)\")"
+    ],
+    "additionalDirectories": [
+      "D:\\github-clone\\sprout-planner"
+    ]
+  }
+}

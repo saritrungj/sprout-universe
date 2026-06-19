@@ -4,21 +4,201 @@
 
 @layer base {
   html {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    --font-en: "Roboto";
+    --font-th: "Prompt";
+    --font-zh-cn: "Noto Sans SC";
+    --font-zh-tw: "Noto Sans TC";
+    --font-body:
+      var(--font-en), var(--font-th), var(--font-zh-cn), var(--font-zh-tw),
+      ui-sans-serif, system-ui, sans-serif;
+    --font-display: var(--font-body);
+    --ease-sprout: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-feedback: cubic-bezier(0.25, 1, 0.5, 1);
+
+    font-family:
+      var(--font-body),
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      system-ui,
+      sans-serif;
     -webkit-font-smoothing: antialiased;
   }
 
+  html:lang(en),
+  html[lang="en"] {
+    --font-body:
+      var(--font-en), var(--font-th), var(--font-zh-cn), var(--font-zh-tw),
+      ui-sans-serif, system-ui, sans-serif;
+    --font-display: var(--font-body);
+  }
+
+  html:lang(th),
+  html[lang="th"] {
+    --font-body:
+      var(--font-th), var(--font-en), var(--font-zh-cn), var(--font-zh-tw),
+      ui-sans-serif, system-ui, sans-serif;
+    --font-display: var(--font-body);
+  }
+
+  html:lang(zh-CN),
+  html[lang="zh-CN"] {
+    --font-body:
+      var(--font-zh-cn), var(--font-en), var(--font-th), var(--font-zh-tw),
+      ui-sans-serif, system-ui, sans-serif;
+    --font-display: var(--font-body);
+  }
+
+  html:lang(zh-TW),
+  html[lang="zh-TW"] {
+    --font-body:
+      var(--font-zh-tw), var(--font-en), var(--font-th), var(--font-zh-cn),
+      ui-sans-serif, system-ui, sans-serif;
+    --font-display: var(--font-body);
+  }
+
   body {
-    @apply bg-sprout-50 dark:bg-gray-950 text-gray-800 dark:text-gray-100 min-h-screen;
+    @apply bg-surface dark:bg-surface-dark text-ink dark:text-surface min-h-screen;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font-family: var(--font-body);
+  }
+
+  button,
+  select {
+    transition:
+      transform 180ms var(--ease-feedback),
+      background-color 220ms var(--ease-sprout),
+      border-color 220ms var(--ease-sprout),
+      color 220ms var(--ease-sprout),
+      box-shadow 220ms var(--ease-sprout),
+      opacity 220ms var(--ease-sprout);
+  }
+
+  input,
+  textarea {
+    transition:
+      border-color 220ms var(--ease-sprout),
+      background-color 220ms var(--ease-sprout),
+      box-shadow 220ms var(--ease-sprout);
+  }
+
+  button:not(:disabled),
+  select:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:not(:disabled):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(22, 101, 52, 0.1);
+  }
+
+  button:not(:disabled):active {
+    transform: translateY(0) scale(0.97);
+    transition-duration: 110ms;
+  }
+
+  button svg,
+  button img {
+    transition: transform 220ms var(--ease-sprout);
+  }
+
+  button:not(:disabled):hover svg,
+  button:not(:disabled):hover img {
+    transform: scale(1.06);
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.12);
   }
 
   * {
     @apply box-border;
   }
+
+  /* Global focus-visible ring — never strip outline without a replacement */
+  :focus-visible {
+    @apply outline-none ring-2 ring-sprout-500 ring-offset-2 ring-offset-surface dark:ring-offset-surface-dark;
+  }
 }
 
 @layer utilities {
   .animate-bloom {
-    animation: bloom 0.5s ease-out;
+    animation: bloom 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* View transition: each tab panel rises and fades in on mount */
+  .view-enter {
+    animation: view-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .motion-card {
+    transition:
+      transform 260ms var(--ease-sprout),
+      border-color 260ms var(--ease-sprout),
+      box-shadow 260ms var(--ease-sprout);
+  }
+
+  .motion-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(251, 146, 60, 0.45);
+    box-shadow:
+      0 18px 40px rgba(251, 146, 60, calc(0.08 + var(--streak-glow, 0) * 0.12)),
+      0 4px 14px rgba(22, 101, 52, 0.06);
+  }
+
+  .streak-mascot {
+    filter: drop-shadow(
+      0 12px 22px rgba(249, 115, 22, calc(0.16 + var(--streak-glow, 0) * 0.2))
+    );
+    transition:
+      transform 260ms var(--ease-sprout),
+      filter 260ms var(--ease-sprout);
+  }
+
+  .streak-mascot img {
+    animation: streak-float 3.8s ease-in-out infinite;
+  }
+
+  .motion-card:hover .streak-mascot {
+    transform: translateY(-3px) scale(1.04);
+  }
+
+  @keyframes streak-float {
+    0%,
+    100% {
+      transform: translateY(0) rotate(-1deg);
+    }
+    50% {
+      transform: translateY(-5px) rotate(1deg);
+    }
+  }
+
+  @keyframes view-enter {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

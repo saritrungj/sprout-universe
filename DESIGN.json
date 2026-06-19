@@ -1,0 +1,374 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-19T00:00:00.000Z",
+  "title": "Design System: Sprout Planner",
+  "extensions": {
+    "colorMeta": {
+      "sprout-primary": {
+        "role": "primary",
+        "displayName": "Sprout Leaf",
+        "canonical": "#16a34a",
+        "tonalRamp": [
+          "#052e16",
+          "#14532d",
+          "#166534",
+          "#15803d",
+          "#16a34a",
+          "#22c55e",
+          "#4ade80",
+          "#86efac",
+          "#bbf7d0",
+          "#dcfce7",
+          "#f0fdf4"
+        ]
+      },
+      "sprout-bright": {
+        "role": "primary",
+        "displayName": "Sprout Glow",
+        "canonical": "#22c55e",
+        "tonalRamp": [
+          "#14532d",
+          "#166534",
+          "#15803d",
+          "#16a34a",
+          "#22c55e",
+          "#4ade80",
+          "#86efac",
+          "#bbf7d0"
+        ]
+      },
+      "sprout-deep": {
+        "role": "primary",
+        "displayName": "Sprout Deep",
+        "canonical": "#15803d",
+        "tonalRamp": [
+          "#052e16",
+          "#14532d",
+          "#166534",
+          "#15803d",
+          "#16a34a",
+          "#22c55e",
+          "#4ade80"
+        ]
+      },
+      "sprout-tint": {
+        "role": "primary",
+        "displayName": "Sprout Tint",
+        "canonical": "#f0fdf4",
+        "tonalRamp": ["#dcfce7", "#e7fbee", "#f0fdf4", "#f7fef9"]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface (Frosted Pane)",
+        "canonical": "#f7fdf8",
+        "tonalRamp": [
+          "#0d1710",
+          "#141f17",
+          "#1a2e1e",
+          "#4b6255",
+          "#6b8c76",
+          "#a9c3b3",
+          "#eef8f1",
+          "#f7fdf8"
+        ]
+      },
+      "surface-muted": {
+        "role": "neutral",
+        "displayName": "Surface Muted (Recessed Pane)",
+        "canonical": "#eef8f1",
+        "tonalRamp": [
+          "#141f17",
+          "#1a2e1e",
+          "#4b6255",
+          "#6b8c76",
+          "#cfe4d8",
+          "#eef8f1",
+          "#f7fdf8"
+        ]
+      },
+      "surface-dark": {
+        "role": "neutral",
+        "displayName": "Surface Dark",
+        "canonical": "#0d1710",
+        "tonalRamp": ["#0d1710", "#141f17", "#1a2e1e", "#26382b", "#4b6255"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink (Sprout-Tinted Near-Black)",
+        "canonical": "#1a2e1e",
+        "tonalRamp": [
+          "#0d1710",
+          "#1a2e1e",
+          "#26382b",
+          "#4b6255",
+          "#6b8c76",
+          "#a9c3b3",
+          "#cfe4d8",
+          "#eef8f1"
+        ]
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Ink Muted",
+        "canonical": "#4b6255",
+        "tonalRamp": ["#1a2e1e", "#33473b", "#4b6255", "#6b8c76", "#a9c3b3"]
+      },
+      "ink-subtle": {
+        "role": "neutral",
+        "displayName": "Ink Subtle",
+        "canonical": "#6b8c76",
+        "tonalRamp": ["#4b6255", "#5c7766", "#6b8c76", "#a9c3b3", "#cfe4d8"]
+      },
+      "flame": {
+        "role": "tertiary",
+        "displayName": "Streak Flame",
+        "canonical": "#f97316",
+        "tonalRamp": [
+          "#7c2d12",
+          "#9a3412",
+          "#c2410c",
+          "#ea580c",
+          "#f97316",
+          "#fb923c",
+          "#fdba74",
+          "#fed7aa"
+        ]
+      },
+      "progress-amber": {
+        "role": "tertiary",
+        "displayName": "In-Progress Amber",
+        "canonical": "#fbbf24",
+        "tonalRamp": [
+          "#92400e",
+          "#b45309",
+          "#d97706",
+          "#f59e0b",
+          "#fbbf24",
+          "#fcd34d",
+          "#fde68a",
+          "#fef3c7"
+        ]
+      },
+      "missed-red": {
+        "role": "tertiary",
+        "displayName": "Missed Red",
+        "canonical": "#f87171",
+        "tonalRamp": [
+          "#7f1d1d",
+          "#991b1b",
+          "#b91c1c",
+          "#dc2626",
+          "#ef4444",
+          "#f87171",
+          "#fca5a5",
+          "#fecaca"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "The living percentage in the progression hero — the single largest element in the app."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Page titles such as 'Today'."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Dialog and section headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Task titles and default reading text; medium weight for warmth."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Uppercase eyebrows and stat captions ('THIS WEEK')."
+      }
+    },
+    "shadows": [
+      {
+        "name": "button-lift",
+        "value": "0 10px 24px rgba(22,101,52,0.10)",
+        "purpose": "Default button hover, paired with translateY(-1px). Active drops to scale(0.97)."
+      },
+      {
+        "name": "card-lift",
+        "value": "0 18px 40px rgba(251,146,60,0.08), 0 4px 14px rgba(22,101,52,0.06)",
+        "purpose": "motion-card hover (streak card), paired with translateY(-2px). Orange component scales with streak length."
+      },
+      {
+        "name": "mascot-float",
+        "value": "drop-shadow(0 18px 30px rgba(22,101,52,0.18))",
+        "purpose": "Always-on glow beneath the hero mascot; the only resting shadow."
+      },
+      {
+        "name": "sheet",
+        "value": "0 25px 50px -12px rgba(0,0,0,0.25)",
+        "purpose": "Modals and the iOS install sheet, above a dimmed blurred backdrop."
+      },
+      {
+        "name": "input-glow",
+        "value": "0 0 0 4px rgba(34,197,94,0.12)",
+        "purpose": "Soft green focus halo on text inputs, replacing a hard border."
+      },
+      {
+        "name": "focus-ring",
+        "value": "0 0 0 2px #22c55e, 0 0 0 4px #f7fdf8",
+        "purpose": "Global :focus-visible treatment — Sprout Glow ring with surface offset."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-sprout",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Default exponential ease-out for color, transform, and shadow transitions."
+      },
+      {
+        "name": "ease-feedback",
+        "value": "cubic-bezier(0.25, 1, 0.5, 1)",
+        "purpose": "Snappier feedback easing for button press transforms."
+      },
+      {
+        "name": "bloom",
+        "value": "scale(0.85) opacity(0) -> scale(1) opacity(1) over 0.45s",
+        "purpose": "Checkmarks and milestone banners popping in."
+      },
+      {
+        "name": "view-enter",
+        "value": "translateY(10px) opacity(0) -> 0 over 0.4s",
+        "purpose": "Each tab panel rising and fading in on switch."
+      },
+      {
+        "name": "streak-float",
+        "value": "translateY(0) rotate(-1deg) <-> translateY(-5px) rotate(1deg) over 3.8-4.6s",
+        "purpose": "Slow idle float of the mascot."
+      },
+      {
+        "name": "seed-burst",
+        "value": "radial particle scatter over 1.2s",
+        "purpose": "Completion celebration when the day flips to 100%."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "all animations/transitions clamped to 0.01ms",
+        "purpose": "Honored via prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" },
+      { "name": "handheld-max", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Solid green action button (add task, submit). Lifts on hover, presses in on active.",
+      "html": "<button class=\"ds-btn-primary\" aria-label=\"Add task\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M12 5v14M5 12h14\"/></svg></button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:12px 16px;background:#16a34a;color:#fff;border:none;border-radius:16px;cursor:pointer;transition:background .22s cubic-bezier(.22,1,.36,1),transform .18s cubic-bezier(.25,1,.5,1),box-shadow .22s cubic-bezier(.22,1,.36,1)}.ds-btn-primary:hover{background:#15803d;transform:translateY(-1px);box-shadow:0 10px 24px rgba(22,101,52,.10)}.ds-btn-primary:active{transform:translateY(0) scale(.97)}.ds-btn-primary:focus-visible{outline:none;box-shadow:0 0 0 2px #22c55e,0 0 0 4px #f7fdf8}"
+    },
+    {
+      "name": "Pill Toggle",
+      "kind": "button",
+      "refersTo": "button-pill",
+      "description": "Soft rounded toggle for secondary actions, e.g. 'Manage monthly recurring tasks'.",
+      "html": "<button class=\"ds-pill\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m17 2 4 4-4 4\"/><path d=\"M3 11v-1a4 4 0 0 1 4-4h14\"/><path d=\"m7 22-4-4 4-4\"/><path d=\"M21 13v1a4 4 0 0 1-4 4H3\"/></svg><span>Manage monthly recurring tasks</span></button>",
+      "css": ".ds-pill{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:8px 16px;background:#eef8f1;color:#15803d;font-size:.875rem;font-weight:600;border:1px solid #dcfce7;border-radius:9999px;cursor:pointer;box-shadow:0 1px 2px rgba(22,101,52,.05);transition:background .22s cubic-bezier(.22,1,.36,1),border-color .22s cubic-bezier(.22,1,.36,1),transform .18s cubic-bezier(.25,1,.5,1)}.ds-pill:hover{background:#f0fdf4;border-color:#86efac;transform:translateY(-1px)}.ds-pill:focus-visible{outline:none;box-shadow:0 0 0 2px #22c55e,0 0 0 4px #f7fdf8}"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Add-task field. Border shifts green and a soft halo appears on focus.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Add a task for today…\" aria-label=\"New task for today\" />",
+      "css": ".ds-input{width:100%;padding:12px 16px;background:#f7fdf8;color:#1a2e1e;font-size:.875rem;border:1px solid #e5e7eb;border-radius:16px;outline:none;transition:border-color .22s cubic-bezier(.22,1,.36,1),box-shadow .22s cubic-bezier(.22,1,.36,1)}.ds-input::placeholder{color:#6b8c76}.ds-input:focus{border-color:#4ade80;box-shadow:0 0 0 4px rgba(34,197,94,.12)}"
+    },
+    {
+      "name": "Task Row",
+      "kind": "card",
+      "refersTo": "task-row",
+      "description": "A tappable task with a circular checkbox. Done state tints green and strikes through; the checkmark blooms in.",
+      "html": "<button class=\"ds-task is-done\" aria-pressed=\"true\"><span class=\"ds-check\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#fff\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 6 9 17l-5-5\"/></svg></span><span class=\"ds-task-title\">Drink 2L of water</span></button>",
+      "css": ".ds-task{display:flex;align-items:center;gap:12px;width:100%;padding:16px;text-align:left;border:1px solid #f3f4f6;border-radius:16px;background:#f7fdf8;cursor:pointer;transition:border-color .22s cubic-bezier(.22,1,.36,1),background .22s cubic-bezier(.22,1,.36,1)}.ds-task:hover{border-color:#86efac}.ds-task.is-done{background:#f0fdf4;border-color:#bbf7d0}.ds-check{display:flex;align-items:center;justify-content:center;width:24px;height:24px;flex:0 0 auto;border-radius:9999px;border:2px solid #22c55e;background:#22c55e}.ds-task-title{font-size:.875rem;font-weight:500;color:#1a2e1e}.ds-task.is-done .ds-task-title{color:#6b8c76;text-decoration:line-through}.ds-task:focus-visible{outline:none;box-shadow:0 0 0 2px #22c55e,0 0 0 4px #f7fdf8}"
+    },
+    {
+      "name": "Tab Bar",
+      "kind": "nav",
+      "refersTo": "tab-selected",
+      "description": "Three-up segmented control. Selected tab gets a surface fill, green label, soft ring and lift.",
+      "html": "<nav class=\"ds-tabs\" role=\"tablist\"><button class=\"ds-tab is-selected\" role=\"tab\" aria-selected=\"true\"><svg width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m3 17 2 2 4-4\"/><path d=\"m3 7 2 2 4-4\"/><path d=\"M13 6h8M13 12h8M13 18h8\"/></svg><span>Today</span></button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\"><svg width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect width=\"18\" height=\"18\" x=\"3\" y=\"4\" rx=\"2\"/><path d=\"M3 10h18M8 2v4M16 2v4\"/></svg><span>Calendar</span></button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\"><svg width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect width=\"7\" height=\"9\" x=\"3\" y=\"3\" rx=\"1\"/><rect width=\"7\" height=\"5\" x=\"14\" y=\"3\" rx=\"1\"/><rect width=\"7\" height=\"9\" x=\"14\" y=\"12\" rx=\"1\"/><rect width=\"7\" height=\"5\" x=\"3\" y=\"16\" rx=\"1\"/></svg><span>Dashboard</span></button></nav>",
+      "css": ".ds-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;background:#eef8f1;border:1px solid #dcfce7;border-radius:16px;box-shadow:0 1px 2px rgba(22,101,52,.05)}.ds-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:52px;padding:8px;font-size:.75rem;font-weight:600;color:#4b6255;background:transparent;border:none;border-radius:12px;cursor:pointer;transition:background .22s cubic-bezier(.22,1,.36,1),color .22s cubic-bezier(.22,1,.36,1),box-shadow .22s cubic-bezier(.22,1,.36,1)}.ds-tab:hover{color:#15803d;background:#f7fdf8}.ds-tab.is-selected{color:#15803d;background:#f7fdf8;box-shadow:0 8px 20px rgba(22,101,52,.12),0 0 0 1px #dcfce7}.ds-tab:focus-visible{outline:none;box-shadow:0 0 0 2px #22c55e,0 0 0 4px #f7fdf8}"
+    },
+    {
+      "name": "Install CTA",
+      "kind": "button",
+      "refersTo": "install-cta",
+      "description": "Add-to-Home-Screen pill, shown only on handheld devices that aren't installed yet.",
+      "html": "<button class=\"ds-install\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/><path d=\"M7 10l5 5 5-5\"/><path d=\"M12 15V3\"/></svg><span>Install app</span></button>",
+      "css": ".ds-install{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:10px 20px;background:#16a34a;color:#fff;font-size:.875rem;font-weight:600;border:none;border-radius:9999px;cursor:pointer;box-shadow:0 10px 24px rgba(22,163,74,.25);transition:background .22s cubic-bezier(.22,1,.36,1),transform .18s cubic-bezier(.25,1,.5,1)}.ds-install:hover{background:#15803d;transform:translateY(-1px)}.ds-install:focus-visible{outline:none;box-shadow:0 0 0 2px #22c55e,0 0 0 4px #f7fdf8}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Living Terrarium",
+    "overview": "Sprout Planner is a small glass garden you tend once a day. Everything happens inside a softly glowing, sprout-tinted world: barely-green frosted-glass surfaces, a translucent jelly-sprout mascot that grows happier as your day fills in, and progress shown as something living rather than a number on a chart. The aesthetic is calm encouragement: friendly rounded type, generous 16px corners, soft exponential ease-out motion, and one restrained green family applied to tinted neutrals so nothing is ever pure white or black. It rejects the visual language of gamified streak apps and corporate dashboards. Depth is tonal; shadows stay hidden until you interact, then elements gently lift. The signature moment is the full-viewport progression hero where mascot, a giant living percentage, and a rising growth-fill gradient reflect exactly how far through today you are.",
+    "keyCharacteristics": [
+      "One green family (the sprout scale) carries identity; neutrals are all green-tinted.",
+      "Generous 16px 'control' radius everywhere; pills and avatars are fully round.",
+      "Flat at rest, lift on interaction — exponential ease-out, no bounce.",
+      "A translucent jelly-sprout mascot is the emotional core, posed per progress state.",
+      "Bilingual-first typography (Latin + Thai + Chinese) from a single weighted family."
+    ],
+    "rules": [
+      {
+        "name": "The Tinted-Neutral Rule",
+        "body": "Pure #ffffff and #000000 are forbidden as surfaces or text. Every neutral leans toward the sprout hue. White exists only as ink on top of saturated green.",
+        "section": "colors"
+      },
+      {
+        "name": "The One-Family Rule",
+        "body": "Identity is carried by the single sprout scale. Amber, orange, and red appear only as status signals (in-progress, streak, missed), never as decoration or alternate brand colors. No second typeface either — emphasis is weight and scale.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular-Number Rule",
+        "body": "Every number that animates or updates uses tabular numerals so digits never reflow as they count up.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-By-Default Rule",
+        "body": "Surfaces are flat at rest. A shadow is a reaction — to hover, focus, or elevation above a backdrop — never decoration on a static element.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Lift-Don't-Pop Rule",
+        "body": "Interaction lifts elements 1-2px with a soft, wide, low-opacity shadow. If it looks like a hard 2014 drop shadow, it's wrong.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do carry identity with the single sprout-green family; use amber/orange/red strictly as status signals.",
+      "Do tint every neutral toward the sprout hue; keep two-step surface ramps (Surface / Surface Muted) for layering.",
+      "Do use the 16px 'control' radius as the resting shape; reserve full-round for pills, avatars, and checkboxes.",
+      "Do keep elements flat at rest and lift them 1-2px with a soft, wide, low-opacity shadow on interaction.",
+      "Do animate with exponential ease-out (cubic-bezier(0.22, 1, 0.36, 1)) and honor prefers-reduced-motion.",
+      "Do use tabular numerals for every counting/animating number.",
+      "Do let the mascot narrate emotional state; match its pose to the progress stage.",
+      "Do keep every interactive control >=44px and provide a visible :focus-visible Sprout ring."
+    ],
+    "donts": [
+      "Don't use pure #ffffff or #000000 as a surface or text color — ever. White is ink-on-green only.",
+      "Don't introduce a second brand color or a second typeface; emphasis is weight and scale.",
+      "Don't ship the gamified habit-tracker look: neon-on-black, dark techy gradients, XP bars, badge clutter.",
+      "Don't use the SaaS hero-metric cliche — a gradient-accented stat card with big number + supporting stats. The sanctioned big-number moment is the mascot-anchored progression hero, nothing else.",
+      "Don't use gradient text, colored side-stripe borders (border-left accents), or decorative glassmorphism. The only glass is the mascot itself.",
+      "Don't apply hard, dark, tight-blur drop shadows at rest. If it looks like a 2014 app card, the shadow is wrong.",
+      "Don't animate layout properties for the growth fill or transitions; use transform/opacity only.",
+      "Don't use bounce or elastic easing anywhere."
+    ]
+  }
+}

@@ -1,62 +1,78 @@
-import { HeatmapCell } from '../lib/status'
-import { todayISO } from '../lib/dates'
+import { HeatmapCell } from "../lib/status";
+import { todayISO, weekdayLabels } from "../lib/dates";
+import { useT } from "../lib/i18n";
 
-type Props = { cells: HeatmapCell[] }
+type Props = { cells: HeatmapCell[] };
 
 function cellColor(cell: HeatmapCell): string {
-  const today = todayISO()
-  if (cell.date > today) return 'bg-gray-100 dark:bg-gray-800'
-  if (cell.status === 'neutral') return 'bg-gray-100 dark:bg-gray-800'
-  if (cell.status === 'missed') return 'bg-red-200 dark:bg-red-900'
-  if (cell.ratio === 0) return 'bg-gray-100 dark:bg-gray-800'
-  if (cell.ratio < 0.34) return 'bg-sprout-200 dark:bg-sprout-900'
-  if (cell.ratio < 0.67) return 'bg-sprout-400 dark:bg-sprout-700'
-  if (cell.ratio < 1)   return 'bg-sprout-500 dark:bg-sprout-600'
-  return 'bg-sprout-600 dark:bg-sprout-500'
+  const today = todayISO();
+  if (cell.date > today) return "bg-gray-100 dark:bg-gray-800";
+  if (cell.status === "neutral") return "bg-gray-100 dark:bg-gray-800";
+  if (cell.status === "missed") return "bg-red-200 dark:bg-red-900";
+  if (cell.ratio === 0) return "bg-gray-100 dark:bg-gray-800";
+  if (cell.ratio < 0.34) return "bg-sprout-200 dark:bg-sprout-900";
+  if (cell.ratio < 0.67) return "bg-sprout-400 dark:bg-sprout-700";
+  if (cell.ratio < 1) return "bg-sprout-500 dark:bg-sprout-600";
+  return "bg-sprout-600 dark:bg-sprout-500";
 }
 
 export default function Heatmap({ cells }: Props) {
-  // cells is a flat array of dates, Sunday-aligned, 26 weeks
-  const weeks: HeatmapCell[][] = []
+  const { t, locale } = useT();
+  const narrow = weekdayLabels(locale, "narrow");
+  const weeks: HeatmapCell[][] = [];
   for (let i = 0; i < cells.length; i += 7) {
-    weeks.push(cells.slice(i, i + 7))
+    weeks.push(cells.slice(i, i + 7));
   }
 
-  // Month labels: pick first cell of each month
-  const monthLabels: { col: number; label: string }[] = []
+  const monthLabels: { col: number; label: string }[] = [];
   weeks.forEach((week, wi) => {
-    const first = week.find(c => c.date.slice(8) === '01')
+    const first = week.find((c) => c.date.slice(8) === "01");
     if (first) {
-      first.date.split('-')
       monthLabels.push({
         col: wi,
-        label: new Date(first.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short' }),
-      })
+        label: new Date(first.date + "T00:00:00").toLocaleDateString(locale, {
+          month: "short",
+        }),
+      });
     }
-  })
+  });
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm border border-sprout-50 dark:border-sprout-950">
-      <h3 className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide font-medium mb-3">Contribution heatmap</h3>
+    <div
+      className="bg-surface dark:bg-surface-dark-muted rounded-2xl p-4 border border-sprout-100 dark:border-sprout-950"
+      aria-label={t("dash.activity")}
+    >
+      <h3 className="text-xs text-ink-subtle dark:text-surface-muted uppercase tracking-wide font-medium mb-3">
+        {t("dash.activity")}
+      </h3>
 
-      {/* Month labels */}
-      <div className="relative" style={{ paddingLeft: '28px' }}>
-        <div className="flex gap-[3px] mb-1 text-xs text-gray-400 dark:text-gray-500" style={{ height: '14px' }}>
+      <div className="relative" style={{ paddingLeft: "28px" }}>
+        {/* Month labels */}
+        <div
+          className="flex gap-[3px] mb-1 text-xs text-ink-subtle dark:text-surface-muted"
+          style={{ height: "14px" }}
+          aria-hidden="true"
+        >
           {weeks.map((_week, wi) => {
-            const ml = monthLabels.find(m => m.col === wi)
+            const ml = monthLabels.find((m) => m.col === wi);
             return (
-              <div key={wi} style={{ width: '12px', flexShrink: 0 }}>
+              <div key={wi} style={{ width: "12px", flexShrink: 0 }}>
                 {ml && <span className="text-[10px]">{ml.label}</span>}
               </div>
-            )
+            );
           })}
         </div>
 
         {/* Day-of-week labels + grid */}
-        <div className="flex gap-1">
-          <div className="flex flex-col gap-[3px] mr-1 text-[9px] text-gray-300 dark:text-gray-600" style={{ width: '20px' }}>
-            {['', 'M', '', 'W', '', 'F', ''].map((d, i) => (
-              <div key={i} style={{ height: '12px', lineHeight: '12px' }}>{d}</div>
+        <div className="flex gap-1" aria-hidden="true">
+          <div
+            className="flex flex-col gap-[3px] mr-1 text-[9px] text-ink-subtle dark:text-surface-muted"
+            style={{ width: "20px" }}
+          >
+            {["", narrow[1], "", narrow[3], "", narrow[5], ""].map((d, i) => (
+              <div key={i} style={{ height: "12px", lineHeight: "12px" }}>
+                {d}
+              </div>
             ))}
           </div>
           <div className="flex gap-[3px]">
@@ -76,13 +92,21 @@ export default function Heatmap({ cells }: Props) {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-1 mt-3 justify-end text-[10px] text-gray-400 dark:text-gray-500">
-        <span>Less</span>
-        {['bg-gray-100 dark:bg-gray-800', 'bg-sprout-200 dark:bg-sprout-900', 'bg-sprout-400 dark:bg-sprout-700', 'bg-sprout-600 dark:bg-sprout-500'].map((c, i) => (
+      <div
+        className="flex items-center gap-1 mt-3 justify-end text-[10px] text-ink-subtle dark:text-surface-muted"
+        aria-hidden="true"
+      >
+        <span>{t("dash.less")}</span>
+        {[
+          "bg-gray-100 dark:bg-gray-800",
+          "bg-sprout-200 dark:bg-sprout-900",
+          "bg-sprout-400 dark:bg-sprout-700",
+          "bg-sprout-600 dark:bg-sprout-500",
+        ].map((c, i) => (
           <div key={i} className={`w-3 h-3 rounded-[2px] ${c}`} />
         ))}
-        <span>More</span>
+        <span>{t("dash.more")}</span>
       </div>
     </div>
-  )
+  );
 }
