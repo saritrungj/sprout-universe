@@ -1,8 +1,39 @@
-# Local environment — keep API keys out of git
+# ── Secrets — never commit real keys ────────────────────────────────
+# This is a frontend app: any VITE_* value is bundled into the public
+# client. Keep real keys in .env (gitignored) and use a proxy for public
+# deploys. See .env.example and the Security section in README.md.
 .env
 .env.local
 .env.*.local
+*.pem
+*.key
 
-# Build / tooling
+# ── Dependencies ────────────────────────────────────────────────────
+node_modules/
+
+# ── Build output / caches ───────────────────────────────────────────
+dist/
+dist-ssr/
+.vite/
 node_modules/.vite/
+*.tsbuildinfo
 .tmp/
+
+# ── Local tooling / agent config (machine-specific) ─────────────────
+.agents/
+.claude/
+.codex/
+
+# ── Logs ────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── Editor / OS cruft ───────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db

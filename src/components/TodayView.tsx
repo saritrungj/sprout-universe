@@ -3,7 +3,6 @@ import {
   Plus,
   Check,
   ChevronDown,
-  Flame,
   X,
   Sunrise,
   Sun,
@@ -21,8 +20,6 @@ import {
   removeDayTask,
   setDayNote,
   setDaySkipped,
-  setGoalEntry,
-  GoalType,
 } from "../lib/store";
 import { todayISO, formatDayLabel, weekdayLabels } from "../lib/dates";
 import {
@@ -34,6 +31,7 @@ import {
 import { useCountUp } from "../lib/useCountUp";
 import { useT, TFn } from "../lib/i18n";
 import { getDailyMotivation } from "../lib/motivation";
+import { playSound } from "../lib/sound";
 import InstallButton from "./InstallButton";
 import Celebration from "./Celebration";
 import HeroPlanner from "./HeroPlanner";
@@ -61,14 +59,6 @@ const SLOT_ICON: Record<Slot, typeof Sun> = {
   evening: Moon,
 };
 
-/** Decorative hero band — sprout stages standing in a row, growing left→right. */
-const GROWTH_STAGES: { src: string; cls: string }[] = [
-  { src: "/sprout-empty.png", cls: "w-12 sm:w-20 lg:w-24" },
-  { src: "/sprout-progress.png", cls: "w-16 sm:w-28 lg:w-32" },
-  { src: "/sprout-success.png", cls: "w-20 sm:w-36 lg:w-44" },
-  { src: "/sprout-streak.png", cls: "w-24 sm:w-44 lg:w-52" },
-];
-
 function lastSevenDays(): string[] {
   const [y, m, d] = todayISO().split("-").map(Number);
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -92,6 +82,15 @@ function stageFor(pct: number, total: number) {
   return { src: "/sprout-fail.png", key: "today.stage.start" };
 }
 
+function streakMascotSrc(days: number): string {
+  if (days >= 21) return "/sprout-streak-21.png";
+  if (days >= 15) return "/sprout-streak-15.png";
+  if (days >= 7) return "/sprout-streak-7.png";
+  if (days >= 3) return "/sprout-streak-3.png";
+  if (days >= 1) return "/sprout-streak-1.png";
+  return "/sprout-streak.png";
+}
+
 export default function TodayView({ state, setState }: Props) {
   const { t, locale } = useT();
   const zen = state.settings.zenMode;
@@ -102,10 +101,6 @@ export default function TodayView({ state, setState }: Props) {
   const status = getDayStatus(state, today);
   const [newTask, setNewTask] = useState("");
   const [newSlot, setNewSlot] = useState<Slot | "anytime">("anytime");
-  const [asTemplate, setAsTemplate] = useState(false);
-  const [goalType, setGoalType] = useState<GoalType | "none">("none");
-  const [goalTarget, setGoalTarget] = useState("");
-  const [checkEveryDays, setCheckEveryDays] = useState("7");
   const [burst, setBurst] = useState(0);
 
   const done = taskIds.filter((id) => log.done[id]).length;
@@ -121,6 +116,8 @@ export default function TodayView({ state, setState }: Props) {
   const stage = stageFor(pct, total);
   const motivation = getDailyMotivation(today, state.settings.language);
   const skipped = !!log.skipped;
+  const streakDays = streak.current;
+  const streakMascot = streakMascotSrc(streakDays);
 
   // Group task ids by slot (undefined slot → "anytime").
   const groups: Record<Slot | "anytime", string[]> = {
@@ -134,15 +131,20 @@ export default function TodayView({ state, setState }: Props) {
     groups[slot].push(id);
   }
   const usesSlots = SLOT_ORDER.some((s) => groups[s].length > 0);
-
+  const soundOn = state.settings.sound !== false;
   const wasComplete = useRef(status === "complete");
   useEffect(() => {
-    if (status === "complete" && !wasComplete.current) setBurst((b) => b + 1);
+    if (status === "complete" && !wasComplete.current) {
+      setBurst((b) => b + 1);
+      playSound("complete", soundOn);
+    }
     wasComplete.current = status === "complete";
-  }, [status]);
+  }, [status, soundOn]);
 
   function toggle(taskId: string) {
-    setState(setTaskDone(state, today, taskId, !log.done[taskId]));
+    const next = !log.done[taskId];
+    setState(setTaskDone(state, today, taskId, next));
+    if (next) playSound("tap", soundOn);
   }
   function removeTodayTask(taskId: string) {
     setState(removeDayTask(state, today, taskId));
@@ -150,24 +152,12 @@ export default function TodayView({ state, setState }: Props) {
   function handleAddTask(e: React.FormEvent) {
     e.preventDefault();
     if (!newTask.trim()) return;
-    const target = Number(goalTarget);
-    const checkDays = Number(checkEveryDays);
     const [nextState, id] = addDayTask(state, today, newTask.trim(), {
       slot: newSlot === "anytime" ? undefined : newSlot,
-      asTemplate,
-      goalType: goalType === "none" ? undefined : goalType,
-      goalConfig:
-        goalType === "none" || !Number.isFinite(target) || target <= 0
-          ? undefined
-          : goalType === "weight"
-            ? { target, checkEveryDays: Number.isFinite(checkDays) && checkDays > 0 ? checkDays : 7 }
-            : { target },
     });
     if (!id) return;
     setState(nextState);
     setNewTask("");
-    setGoalType("none");
-    setGoalTarget("");
   }
   function scrollToTasks() {
     document
@@ -225,22 +215,6 @@ export default function TodayView({ state, setState }: Props) {
             <X size={16} aria-hidden="true" />
           </button>
         </div>
-        {task.goalType && (
-          <label className="flex items-center gap-2 px-2 pb-1 text-xs text-ink-subtle dark:text-surface-muted">
-            {task.goalType === "savings" ? t("goal.savedToday") : t("goal.weightToday")}
-            <input
-              type="number"
-              inputMode="decimal"
-              disabled={skipped}
-              value={log.goalEntries?.[id] ?? ""}
-              onChange={(e) =>
-                setState(setGoalEntry(state, today, id, Number(e.target.value)))
-              }
-              className="min-h-[40px] w-28 rounded-xl border border-sprout-100 bg-surface px-3 py-2 text-sm text-ink disabled:opacity-50 dark:border-sprout-900 dark:bg-surface-dark dark:text-surface"
-            />
-            <span>{task.goalType === "savings" ? t("goal.currency") : t("goal.kg")}</span>
-          </label>
-        )}
       </li>
     );
   }
@@ -264,26 +238,9 @@ export default function TodayView({ state, setState }: Props) {
           }}
         />
 
-        <div className="relative z-10 flex w-full max-w-3xl flex-col items-center gap-7 text-center">
-          {/* Growth band — sprout stages standing in a row */}
-          <div className="flex w-full items-end justify-center gap-2 sm:gap-5">
-            {GROWTH_STAGES.map((g, i) => (
-              <img
-                key={g.src}
-                src={g.src}
-                alt=""
-                aria-hidden="true"
-                decoding="async"
-                className={`${g.cls} object-contain drop-shadow-[0_14px_24px_rgba(22,101,52,0.16)]`}
-                style={{
-                  animation: `streak-float 4.6s ease-in-out ${i * 0.35}s infinite`,
-                }}
-              />
-            ))}
-          </div>
-
-          {/* Content — date, status, quote, streak, actions */}
-          <div className="flex w-full flex-col items-center text-center">
+        <div className="relative z-10 grid w-full max-w-5xl items-center gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
+          {/* Content — date, status, quote, actions */}
+          <div className="order-2 flex w-full flex-col items-center text-center lg:order-1 lg:items-start lg:text-left">
             <p className="text-xs font-semibold uppercase tracking-wide text-ink-subtle dark:text-surface-muted">
               {formatDayLabel(today, locale)}
             </p>
@@ -298,32 +255,14 @@ export default function TodayView({ state, setState }: Props) {
               </blockquote>
             </figure>
 
-            {!zen && (
-              <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm">
-                <span className="inline-flex items-center gap-1.5 font-semibold text-ink dark:text-surface">
-                  <Flame
-                    size={16}
-                    aria-hidden="true"
-                    className={
-                      streak.current > 0
-                        ? "text-orange-500 dark:text-orange-400"
-                        : "text-ink-subtle dark:text-surface-muted"
-                    }
-                  />
-                  {streak.current > 0
-                    ? t("headline.streak", { n: streak.current })
-                    : t("today.streakStart")}
-                </span>
-                {stats.totalDays > 0 && (
-                  <span className="text-ink-muted dark:text-surface-muted tabular-nums">
-                    {t("today.monthInline", { pct: stats.completionPct })}
-                  </span>
-                )}
-              </div>
+            {!zen && stats.totalDays > 0 && (
+              <p className="mt-4 text-sm font-semibold text-ink-muted dark:text-surface-muted tabular-nums">
+                {t("today.monthInline", { pct: stats.completionPct })}
+              </p>
             )}
 
-            <div className="mt-6 flex w-full flex-col items-center gap-3">
-              <div className="flex flex-wrap items-center justify-center gap-3">
+            <div className="mt-6 flex w-full flex-col items-center gap-3 lg:items-start">
+              <div className="flex flex-wrap items-center justify-center gap-3 lg:justify-start">
                 <HeroPlanner state={state} setState={setState} />
                 <button
                   type="button"
@@ -341,17 +280,211 @@ export default function TodayView({ state, setState }: Props) {
               <InstallButton />
             </div>
           </div>
+
+          {!zen && allDone && (
+            <div className="order-1 flex justify-center lg:order-2 lg:justify-end">
+              {/* All tasks done — a big, happy, celebrating sprout in a
+                  radiant aura, on top of the existing seed-burst. */}
+              <div className="relative flex h-72 w-72 items-center justify-center sm:h-80 sm:w-80 lg:h-[22rem] lg:w-[22rem]">
+                <span
+                  aria-hidden="true"
+                  className="complete-rays absolute h-60 w-60 rounded-full blur-md sm:h-72 sm:w-72"
+                  style={{
+                    background:
+                      "conic-gradient(from 0deg, rgba(251,191,36,0), rgba(251,191,36,0.55), rgba(34,197,94,0), rgba(34,197,94,0.5), rgba(251,191,36,0), rgba(251,191,36,0.55), rgba(34,197,94,0))",
+                  }}
+                />
+                <span
+                  aria-hidden="true"
+                  className="complete-aura absolute h-52 w-52 rounded-full bg-amber-300/55 blur-2xl dark:bg-amber-400/35 sm:h-64 sm:w-64"
+                />
+                <img
+                  src="/sprout-success.png"
+                  alt=""
+                  aria-hidden="true"
+                  decoding="async"
+                  draggable={false}
+                  className="complete-cheer relative h-60 w-60 object-contain drop-shadow-[0_22px_44px_rgba(245,158,11,0.45)] sm:h-72 sm:w-72"
+                />
+                <div className="absolute -bottom-1 inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50/95 px-4 py-1.5 text-sm font-bold text-amber-700 shadow-[0_16px_36px_rgba(245,158,11,0.22)] dark:border-amber-800 dark:bg-amber-950/90 dark:text-amber-200">
+                  <Sparkles
+                    size={15}
+                    aria-hidden="true"
+                    className="animate-sparkle text-amber-500 dark:text-amber-300"
+                  />
+                  {t("today.allDone")}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!zen && !allDone && (
+            <div className="order-1 flex justify-center lg:order-2 lg:justify-end">
+              <div className="relative flex h-64 w-64 items-center justify-center sm:h-72 sm:w-72">
+                <span
+                  aria-hidden="true"
+                  className="absolute h-48 w-48 rounded-full bg-sprout-200/55 blur-3xl dark:bg-sprout-600/25"
+                />
+                <span
+                  aria-hidden="true"
+                  className="absolute right-6 top-8 h-16 w-16 rounded-full bg-amber-300/45 blur-2xl dark:bg-amber-500/25"
+                />
+                <img
+                  src={streakMascot}
+                  alt=""
+                  aria-hidden="true"
+                  decoding="async"
+                  draggable={false}
+                  className="relative h-48 w-48 object-contain drop-shadow-[0_22px_34px_rgba(22,101,52,0.2)] sm:h-56 sm:w-56"
+                  style={{ animation: "streak-float 4.8s ease-in-out infinite" }}
+                />
+                <div className="absolute right-2 top-7 flex min-h-20 min-w-20 flex-col items-center justify-center rounded-full border border-amber-200 bg-amber-50/95 px-3 text-center shadow-[0_16px_36px_rgba(245,158,11,0.22)] dark:border-amber-800 dark:bg-amber-950/90">
+                  <Sparkles
+                    size={15}
+                    aria-hidden="true"
+                    className="mb-0.5 text-amber-500 dark:text-amber-300"
+                  />
+                  <span className="font-sans text-2xl font-bold leading-none tabular-nums text-amber-600 dark:text-amber-300">
+                    {streakDays}
+                  </span>
+                  <span className="mt-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-200">
+                    {t("unit.dayShort")}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
-      {/* ── Tasks ────────────────────────────────────────────────────── */}
+      {/* ── Tasks — second full-height "page" ────────────────────────── */}
       <section
         id="today-tasks"
-        className="mx-auto flex min-h-full w-full max-w-6xl scroll-mt-20 items-center px-4 py-10 lg:px-6"
+        className="flex min-h-[100svh] w-full scroll-mt-16 items-center px-4 py-12 lg:px-8"
       >
-        <div className="grid w-full gap-6 lg:grid-cols-[18rem_minmax(0,1fr)_21rem] lg:items-start">
-          {/* ── Center: progress & day overview ─────────────────────── */}
-          <div className="order-1 flex flex-col gap-6 lg:order-2">
+        <div className="mx-auto grid w-full max-w-6xl gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
+          {/* ── Main: add a task + the task list ─────────────────────── */}
+          <div className="flex flex-col gap-6">
+            {/* Add a task — simple by design: title + time of day. */}
+            <div className="rounded-3xl border border-sprout-100 bg-surface p-4 dark:border-sprout-900 dark:bg-surface-dark-muted sm:p-5">
+              <h2 className="mb-3 text-xs font-medium uppercase tracking-wide text-ink-subtle dark:text-surface-muted">
+                {t("today.addHeading")}
+              </h2>
+              <form onSubmit={handleAddTask} className="flex flex-col gap-3">
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_12rem_3rem]">
+                  <input
+                    value={newTask}
+                    onChange={(e) => setNewTask(e.target.value)}
+                    placeholder={t("today.addPlaceholder")}
+                    aria-label={t("today.newTaskAria")}
+                    className="min-w-0 flex-1 rounded-2xl border border-sprout-100 bg-surface px-4 py-3 text-sm text-ink placeholder-ink-subtle transition-colors focus:border-sprout-400 dark:border-sprout-900 dark:bg-surface-dark dark:text-surface dark:placeholder-surface-muted"
+                  />
+                  <label className="relative min-w-0">
+                    <span className="sr-only">{t("slot.assign")}</span>
+                    <Clock
+                      size={15}
+                      aria-hidden="true"
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle dark:text-surface-muted"
+                    />
+                    <select
+                      value={newSlot}
+                      onChange={(e) =>
+                        setNewSlot(e.target.value as Slot | "anytime")
+                      }
+                      aria-label={t("slot.assign")}
+                      className="min-h-[48px] w-full rounded-2xl border border-sprout-100 bg-surface py-3 pl-9 pr-3 text-sm font-semibold text-ink transition-colors focus:border-sprout-400 dark:border-sprout-900 dark:bg-surface-dark dark:text-surface"
+                    >
+                      <option value="anytime">{t("slot.anytime")}</option>
+                      <option value="morning">{t("slot.morning")}</option>
+                      <option value="afternoon">{t("slot.afternoon")}</option>
+                      <option value="evening">{t("slot.evening")}</option>
+                    </select>
+                  </label>
+                  <button
+                    type="submit"
+                    aria-label={t("task.addAria")}
+                    className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl bg-sprout-600 text-white transition-colors hover:bg-sprout-700"
+                  >
+                    <Plus size={18} aria-hidden="true" />
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* Task list (grouped by time of day when slots are used) */}
+            <div className="flex flex-col gap-4">
+              {!skipped && taskIds.length > 0 && (
+                <h2 className="text-xs font-medium uppercase tracking-wide text-ink-subtle dark:text-surface-muted">
+                  {t("today.tasksHeading")}
+                </h2>
+              )}
+              {skipped ? (
+                <div className="animate-pop-in flex flex-col items-center gap-4 rounded-3xl border border-sky-200 bg-gradient-to-b from-sky-50 to-surface px-6 py-10 text-center dark:border-sky-900 dark:from-sky-950/50 dark:to-surface-dark-muted">
+                  <span className="relative">
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-0 -z-10 rounded-full bg-sky-300/35 blur-2xl dark:bg-sky-600/25"
+                    />
+                    <img
+                      src="/sprout-rest.png"
+                      alt=""
+                      aria-hidden="true"
+                      className="h-24 w-24 object-contain"
+                      style={{ animation: "streak-float 4.6s ease-in-out infinite" }}
+                    />
+                  </span>
+                  <div>
+                    <h3 className="text-lg font-bold text-sky-800 dark:text-sky-200">
+                      {t("today.resting")}
+                    </h3>
+                    <p className="mx-auto mt-1 max-w-xs text-sm text-sky-700/90 dark:text-sky-300/80">
+                      {t("today.restMessage")}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setState(setDaySkipped(state, today, false))}
+                    className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-sky-600 px-5 py-2.5 text-sm font-bold text-white shadow-[0_14px_30px_rgba(2,132,199,0.28)] transition-all hover:-translate-y-0.5 hover:bg-sky-700 active:translate-y-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface dark:focus-visible:ring-offset-surface-dark"
+                  >
+                    <Sunrise size={16} aria-hidden="true" />
+                    {t("today.resumeDay")}
+                  </button>
+                </div>
+              ) : taskIds.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-sprout-200 py-10 text-center text-ink-subtle dark:border-sprout-900 dark:text-surface-muted">
+                  <img
+                    src="/sprout-empty.png"
+                    alt=""
+                    aria-hidden="true"
+                    className="mx-auto mb-3 h-20 w-20 object-contain"
+                  />
+                  <p className="text-sm">{t("today.empty")}</p>
+                </div>
+              ) : usesSlots ? (
+                <div className="flex flex-col gap-5">
+                  {SLOT_ORDER.filter((s) => groups[s].length > 0).map((slot) => (
+                    <SlotGroup key={slot} slot={slot} t={t}>
+                      <ul className="flex flex-col gap-2">
+                        {groups[slot].map(renderRow)}
+                      </ul>
+                    </SlotGroup>
+                  ))}
+                  {groups.anytime.length > 0 && (
+                    <SlotGroup slot="anytime" t={t}>
+                      <ul className="flex flex-col gap-2">
+                        {groups.anytime.map(renderRow)}
+                      </ul>
+                    </SlotGroup>
+                  )}
+                </div>
+              ) : (
+                <ul className="flex flex-col gap-2">{taskIds.map(renderRow)}</ul>
+              )}
+            </div>
+          </div>
+
+          {/* ── Sidebar: day overview ────────────────────────────────── */}
+          <aside className="flex flex-col gap-6 lg:sticky lg:top-16">
         {/* Today's progress — live stage mascot + completion. On a fully
             complete day the mascot cheers inside a radiant green/gold glow. */}
         <div
@@ -528,10 +661,7 @@ export default function TodayView({ state, setState }: Props) {
             </button>
           </div>
         )}
-          </div>
 
-          {/* ── Right: note + today's tasks ─────────────────────────── */}
-          <div className="order-2 flex flex-col gap-6 lg:order-3">
         {/* Daily note */}
         <label className="flex flex-col gap-2">
           <span className="text-xs font-medium uppercase tracking-wide text-ink-subtle dark:text-surface-muted">
@@ -546,163 +676,7 @@ export default function TodayView({ state, setState }: Props) {
           />
         </label>
 
-        {/* Task list (grouped by time of day when slots are used) */}
-        {!skipped && taskIds.length > 0 && (
-          <h2 className="text-xs font-medium uppercase tracking-wide text-ink-subtle dark:text-surface-muted">
-            {t("today.tasksHeading")}
-          </h2>
-        )}
-        {skipped ? (
-          <div className="animate-pop-in flex flex-col items-center gap-4 rounded-3xl border border-sky-200 bg-gradient-to-b from-sky-50 to-surface px-6 py-10 text-center dark:border-sky-900 dark:from-sky-950/50 dark:to-surface-dark-muted">
-            <span className="relative">
-              <span
-                aria-hidden="true"
-                className="absolute inset-0 -z-10 rounded-full bg-sky-300/35 blur-2xl dark:bg-sky-600/25"
-              />
-              <img
-                src="/sprout-rest.png"
-                alt=""
-                aria-hidden="true"
-                className="h-24 w-24 object-contain"
-                style={{ animation: "streak-float 4.6s ease-in-out infinite" }}
-              />
-            </span>
-            <div>
-              <h3 className="text-lg font-bold text-sky-800 dark:text-sky-200">
-                {t("today.resting")}
-              </h3>
-              <p className="mx-auto mt-1 max-w-xs text-sm text-sky-700/90 dark:text-sky-300/80">
-                {t("today.restMessage")}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setState(setDaySkipped(state, today, false))}
-              className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-sky-600 px-5 py-2.5 text-sm font-bold text-white shadow-[0_14px_30px_rgba(2,132,199,0.28)] transition-all hover:-translate-y-0.5 hover:bg-sky-700 active:translate-y-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface dark:focus-visible:ring-offset-surface-dark"
-            >
-              <Sunrise size={16} aria-hidden="true" />
-              {t("today.resumeDay")}
-            </button>
-          </div>
-        ) : taskIds.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-sprout-200 py-10 text-center text-ink-subtle dark:border-sprout-900 dark:text-surface-muted">
-            <img
-              src="/sprout-empty.png"
-              alt=""
-              aria-hidden="true"
-              className="mx-auto mb-3 h-20 w-20 object-contain"
-            />
-            <p className="text-sm">{t("today.empty")}</p>
-          </div>
-        ) : usesSlots ? (
-          <div className="flex flex-col gap-5">
-            {SLOT_ORDER.filter((s) => groups[s].length > 0).map((slot) => (
-              <SlotGroup key={slot} slot={slot} t={t}>
-                <ul className="flex flex-col gap-2">
-                  {groups[slot].map(renderRow)}
-                </ul>
-              </SlotGroup>
-            ))}
-            {groups.anytime.length > 0 && (
-              <SlotGroup slot="anytime" t={t}>
-                <ul className="flex flex-col gap-2">
-                  {groups.anytime.map(renderRow)}
-                </ul>
-              </SlotGroup>
-            )}
-          </div>
-        ) : (
-          <ul className="flex flex-col gap-2">{taskIds.map(renderRow)}</ul>
-        )}
-          </div>
-
-          {/* ── Left: create a task ─────────────────────────────────── */}
-          <div className="order-3 flex flex-col gap-3 lg:order-1">
-            <h2 className="text-xs font-medium uppercase tracking-wide text-ink-subtle dark:text-surface-muted">
-              {t("today.addHeading")}
-            </h2>
-        {/* Add today task with slot picker */}
-        <form onSubmit={handleAddTask} className="flex flex-col gap-2">
-          <div className="flex gap-2">
-            <input
-              value={newTask}
-              onChange={(e) => setNewTask(e.target.value)}
-              placeholder={t("today.addPlaceholder")}
-              aria-label={t("today.newTaskAria")}
-              className="flex-1 rounded-2xl border border-sprout-100 bg-surface px-4 py-3 text-sm text-ink placeholder-ink-subtle transition-colors focus:border-sprout-400 dark:border-sprout-900 dark:bg-surface-dark-muted dark:text-surface dark:placeholder-surface-muted"
-            />
-            <button
-              type="submit"
-              aria-label={t("task.addAria")}
-              className="min-h-[44px] min-w-[44px] rounded-2xl bg-sprout-600 px-4 py-3 text-white transition-colors hover:bg-sprout-700"
-            >
-              <Plus size={18} aria-hidden="true" />
-            </button>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs text-ink-subtle dark:text-surface-muted">
-          <label className="flex items-center gap-2">
-            <Clock size={13} aria-hidden="true" />
-            {t("slot.assign")}
-            <select
-              value={newSlot}
-              onChange={(e) => setNewSlot(e.target.value as Slot | "anytime")}
-              aria-label={t("slot.assign")}
-              className="min-h-[44px] rounded-xl border border-sprout-100 bg-surface px-3 py-2 text-sm font-medium text-ink focus:border-sprout-400 dark:border-sprout-900 dark:bg-surface-dark-muted dark:text-surface"
-            >
-              <option value="anytime">{t("slot.anytime")}</option>
-              <option value="morning">{t("slot.morning")}</option>
-              <option value="afternoon">{t("slot.afternoon")}</option>
-              <option value="evening">{t("slot.evening")}</option>
-            </select>
-          </label>
-          <label className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-sprout-100 bg-surface px-3 py-2 text-sm font-medium text-ink dark:border-sprout-900 dark:bg-surface-dark-muted dark:text-surface">
-            <input
-              type="checkbox"
-              checked={asTemplate}
-              onChange={(e) => setAsTemplate(e.target.checked)}
-              className="h-4 w-4 accent-sprout-600"
-            />
-            {t("task.template")}
-          </label>
-          <label className="flex items-center gap-2">
-            {t("goal.type")}
-            <select
-              value={goalType}
-              onChange={(e) => setGoalType(e.target.value as GoalType | "none")}
-              className="min-h-[44px] rounded-xl border border-sprout-100 bg-surface px-3 py-2 text-sm font-medium text-ink focus:border-sprout-400 dark:border-sprout-900 dark:bg-surface-dark-muted dark:text-surface"
-            >
-              <option value="none">{t("goal.none")}</option>
-              <option value="savings">{t("goal.savings")}</option>
-              <option value="weight">{t("goal.weight")}</option>
-            </select>
-          </label>
-          {goalType !== "none" && (
-            <>
-              <input
-                type="number"
-                inputMode="decimal"
-                value={goalTarget}
-                onChange={(e) => setGoalTarget(e.target.value)}
-                placeholder={t("goal.target")}
-                aria-label={t("goal.target")}
-                className="min-h-[44px] w-32 rounded-xl border border-sprout-100 bg-surface px-3 py-2 text-sm text-ink focus:border-sprout-400 dark:border-sprout-900 dark:bg-surface-dark-muted dark:text-surface"
-              />
-              {goalType === "weight" && (
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={checkEveryDays}
-                  onChange={(e) => setCheckEveryDays(e.target.value)}
-                  placeholder={t("goal.checkEvery")}
-                  aria-label={t("goal.checkEvery")}
-                  className="min-h-[44px] w-32 rounded-xl border border-sprout-100 bg-surface px-3 py-2 text-sm text-ink focus:border-sprout-400 dark:border-sprout-900 dark:bg-surface-dark-muted dark:text-surface"
-                />
-              )}
-            </>
-          )}
-          </div>
-        </form>
-          </div>
+        </aside>
         </div>
       </section>
     </div>

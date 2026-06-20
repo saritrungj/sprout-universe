@@ -9,13 +9,25 @@ export type Task = {
   isTemplate?: boolean;
   goalType?: GoalType;
   goalConfig?: GoalConfig;
+  subtasks?: Subtask[];
+  recurrence?: Recurrence;
 };
 
 export type GoalType = "savings" | "weight";
+export type Subtask = { id: string; title: string };
+export type Recurrence =
+  | { type: "daily" }
+  | { type: "weekly"; weekdays: number[] };
+export type WeightDirection = "loss" | "gain";
 
 export type GoalConfig =
   | { target: number }
-  | { target: number; checkEveryDays: number };
+  | {
+      target: number;
+      checkEveryDays?: number;
+      start?: number;
+      direction?: WeightDirection;
+    };
 
 /** Mascot avatar poses the user can pick (maps to /sprout-<key>.png). */
 export type MascotKey =
@@ -27,8 +39,34 @@ export type MascotKey =
   | "empty"
   | "work";
 
-export type Reminders = { enabled: boolean; time: string };
+export type Reminders = {
+  enabled: boolean;
+  time: string;
+  mode?: "fixed" | "smart";
+};
 export type AISettings = { endpoint: string; model: string };
+export type FocusSession = {
+  id: string;
+  taskId?: string;
+  startedAt: string;
+  endedAt: string;
+  minutes: number;
+  mode: "focus" | "break";
+};
+export type MoodKey = "happy" | "calm" | "tired" | "sad" | "stressed";
+export type MoodLog = {
+  date: string;
+  mood: MoodKey;
+  energy: number;
+  gratitude?: string;
+  vent?: string;
+};
+export type CoachMessage = {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  createdAt: string;
+};
 
 export type MonthPlan = {
   month: string; // "2026-06"
@@ -43,6 +81,8 @@ export type DayLog = {
   skipped?: boolean;
   note?: string;
   goalEntries?: Record<string, number>;
+  subtasksDone?: Record<string, Record<string, boolean>>;
+  doneAt?: Record<string, string>;
 };
 
 export type Lang = "en" | "th" | "zh-CN" | "zh-TW";
@@ -54,6 +94,8 @@ export type Settings = {
   mascot: MascotKey;
   reminders: Reminders;
   ai: AISettings;
+  /** Sound effects for notifications & celebrations (default on). */
+  sound?: boolean;
 };
 
 export type AppState = {
@@ -61,6 +103,9 @@ export type AppState = {
   months: Record<string, MonthPlan>;
   days: Record<string, DayLog>;
   templates?: string[];
+  focusSessions: FocusSession[];
+  moodLogs: Record<string, MoodLog>;
+  coachMessages: CoachMessage[];
   settings: Settings;
 };
 
@@ -69,12 +114,15 @@ export const defaultState: AppState = {
   months: {},
   days: {},
   templates: [],
+  focusSessions: [],
+  moodLogs: {},
+  coachMessages: [],
   settings: {
     theme: "light",
-    language: "en",
+    language: "th",
     zenMode: false,
     mascot: "neutral",
-    reminders: { enabled: false, time: "20:00" },
+    reminders: { enabled: false, time: "20:00", mode: "fixed" },
     ai: { endpoint: "", model: "cloud-task-model" },
   },
 };
@@ -97,7 +145,16 @@ export function getDayLog(state: AppState, date: string): DayLog {
     skipped: log?.skipped ?? false,
     note: log?.note ?? "",
     goalEntries: log?.goalEntries ?? {},
+    subtasksDone: log?.subtasksDone ?? {},
+    doneAt: log?.doneAt ?? {},
   };
+}
+
+export function taskRecursOnDate(task: Task | undefined, date: string): boolean {
+  if (!task?.recurrence) return false;
+  if (task.recurrence.type === "daily") return true;
+  const day = new Date(date + "T00:00:00").getDay();
+  return task.recurrence.weekdays.includes(day);
 }
 
 export function getDayTaskIds(state: AppState, date: string): string[] {
@@ -106,9 +163,16 @@ export function getDayTaskIds(state: AppState, date: string): string[] {
   const plan = getMonthPlan(state, month);
   const log = getDayLog(state, date);
   const dayIds = log.taskIds ?? [];
-  const templateIds = state.templates ?? plan.mainTaskIds;
-  const baseIds = dayIds.length > 0 ? dayIds : templateIds;
-  return [...new Set([...baseIds, ...log.addonTaskIds])];
+  const legacyTemplateIds = state.templates ?? [];
+  const templateIds = plan.mainTaskIds.length > 0 ? plan.mainTaskIds : legacyTemplateIds;
+  const recurringIds = Object.values(state.tasks)
+    .filter((task) => taskRecursOnDate(task, date))
+    .map((task) => task.id);
+  const baseIds =
+    dayIds.length > 0
+      ? dayIds
+      : templateIds.filter((id) => !state.tasks[id]?.recurrence);
+  return [...new Set([...baseIds, ...recurringIds, ...log.addonTaskIds])];
 }
 
 export function nanoid(): string {
@@ -120,7 +184,10 @@ export function addTask(
   state: AppState,
   title: string,
   slot?: Slot,
-  options: Pick<Task, "isTemplate" | "goalType" | "goalConfig"> = {},
+  options: Pick<
+    Task,
+    "isTemplate" | "goalType" | "goalConfig" | "recurrence"
+  > = {},
 ): [AppState, string] {
   const id = nanoid();
   const task: Task = {
@@ -138,6 +205,7 @@ export type AddDayTaskOptions = {
   asTemplate?: boolean;
   goalType?: GoalType;
   goalConfig?: GoalConfig;
+  recurrence?: Recurrence;
 };
 
 function normalizeTitle(title: string): string {
@@ -150,7 +218,8 @@ export function getOrCreateDayPlan(state: AppState, date: string): AppState {
   if (log.taskIds) return state;
   const month = date.slice(0, 7);
   const plan = getMonthPlan(state, month);
-  const templateIds = state.templates ?? plan.mainTaskIds;
+  const legacyTemplateIds = state.templates ?? [];
+  const templateIds = plan.mainTaskIds.length > 0 ? plan.mainTaskIds : legacyTemplateIds;
   return {
     ...state,
     days: {
@@ -180,6 +249,7 @@ export function addDayTask(
     isTemplate: options.asTemplate,
     goalType: options.goalType,
     goalConfig: options.goalConfig,
+    recurrence: options.recurrence,
   });
   const templates =
     options.asTemplate && !(withTask.templates ?? []).includes(id)
@@ -249,12 +319,37 @@ export function addMainTask(
       ...state.tasks,
       [taskId]: { ...state.tasks[taskId], isTemplate: true },
     },
-    templates: [...new Set([...(state.templates ?? []), taskId])],
     months: {
       ...state.months,
       [month]: { ...plan, mainTaskIds: [...plan.mainTaskIds, taskId] },
     },
   };
+}
+
+export function addMonthTask(
+  state: AppState,
+  month: string,
+  title: string,
+  slot?: Slot,
+): [AppState, string] {
+  const cleanTitle = title.trim();
+  if (!cleanTitle) return [state, ""];
+  const plan = getMonthPlan(state, month);
+  const duplicate = plan.mainTaskIds.some(
+    (id) => normalizeTitle(state.tasks[id]?.title ?? "") === normalizeTitle(cleanTitle),
+  );
+  if (duplicate) return [state, ""];
+  const [withTask, id] = addTask(state, cleanTitle, slot, { isTemplate: true });
+  return [
+    {
+      ...withTask,
+      months: {
+        ...withTask.months,
+        [month]: { ...plan, mainTaskIds: [...plan.mainTaskIds, id] },
+      },
+    },
+    id,
+  ];
 }
 
 export function removeMainTask(
@@ -265,7 +360,6 @@ export function removeMainTask(
   const plan = getMonthPlan(state, month);
   return {
     ...state,
-    templates: (state.templates ?? []).filter((id) => id !== taskId),
     months: {
       ...state.months,
       [month]: {
@@ -347,6 +441,90 @@ export function setGoalEntry(
   };
 }
 
+export function addSubtask(
+  state: AppState,
+  taskId: string,
+  title: string,
+): [AppState, string] {
+  const task = state.tasks[taskId];
+  const cleanTitle = title.trim();
+  if (!task || !cleanTitle) return [state, ""];
+  const id = nanoid();
+  return [
+    {
+      ...state,
+      tasks: {
+        ...state.tasks,
+        [taskId]: {
+          ...task,
+          subtasks: [...(task.subtasks ?? []), { id, title: cleanTitle }],
+        },
+      },
+    },
+    id,
+  ];
+}
+
+export function removeSubtask(
+  state: AppState,
+  taskId: string,
+  subtaskId: string,
+): AppState {
+  const task = state.tasks[taskId];
+  if (!task) return state;
+  const days: Record<string, DayLog> = {};
+  for (const [date, log] of Object.entries(state.days)) {
+    const taskDone = { ...(log.subtasksDone?.[taskId] ?? {}) };
+    delete taskDone[subtaskId];
+    days[date] = {
+      ...log,
+      subtasksDone: {
+        ...(log.subtasksDone ?? {}),
+        [taskId]: taskDone,
+      },
+    };
+  }
+  return {
+    ...state,
+    tasks: {
+      ...state.tasks,
+      [taskId]: {
+        ...task,
+        subtasks: (task.subtasks ?? []).filter((item) => item.id !== subtaskId),
+      },
+    },
+    days,
+  };
+}
+
+export function setSubtaskDone(
+  state: AppState,
+  date: string,
+  taskId: string,
+  subtaskId: string,
+  done: boolean,
+): AppState {
+  if (isFutureDate(date)) return state;
+  const stateWithPlan = getOrCreateDayPlan(state, date);
+  const log = getDayLog(stateWithPlan, date);
+  return {
+    ...stateWithPlan,
+    days: {
+      ...stateWithPlan.days,
+      [date]: {
+        ...log,
+        subtasksDone: {
+          ...(log.subtasksDone ?? {}),
+          [taskId]: {
+            ...(log.subtasksDone?.[taskId] ?? {}),
+            [subtaskId]: done,
+          },
+        },
+      },
+    },
+  };
+}
+
 export function removeAddonTask(
   state: AppState,
   date: string,
@@ -373,10 +551,14 @@ export function setTaskDone(
   date: string,
   taskId: string,
   done: boolean,
+  doneAt = new Date().toISOString(),
 ): AppState {
   if (isFutureDate(date)) return state;
   const stateWithPlan = getOrCreateDayPlan(state, date);
   const log = getDayLog(stateWithPlan, date);
+  const nextDoneAt = { ...(log.doneAt ?? {}) };
+  if (done) nextDoneAt[taskId] = doneAt;
+  else delete nextDoneAt[taskId];
   return {
     ...stateWithPlan,
     days: {
@@ -385,6 +567,7 @@ export function setTaskDone(
         ...log,
         skipped: false,
         done: { ...log.done, [taskId]: done },
+        doneAt: nextDoneAt,
       },
     },
   };
@@ -434,6 +617,50 @@ export function setMascot(state: AppState, mascot: MascotKey): AppState {
 
 export function setReminders(state: AppState, reminders: Reminders): AppState {
   return { ...state, settings: { ...state.settings, reminders } };
+}
+
+export function setSound(state: AppState, sound: boolean): AppState {
+  return { ...state, settings: { ...state.settings, sound } };
+}
+
+export function addFocusSession(
+  state: AppState,
+  session: Omit<FocusSession, "id">,
+): AppState {
+  return {
+    ...state,
+    focusSessions: [
+      ...(state.focusSessions ?? []),
+      { ...session, id: nanoid() },
+    ],
+  };
+}
+
+export function setMoodLog(
+  state: AppState,
+  date: string,
+  log: Omit<MoodLog, "date">,
+): AppState {
+  return {
+    ...state,
+    moodLogs: {
+      ...(state.moodLogs ?? {}),
+      [date]: { ...log, date },
+    },
+  };
+}
+
+export function addCoachMessage(
+  state: AppState,
+  message: Omit<CoachMessage, "id" | "createdAt">,
+): AppState {
+  return {
+    ...state,
+    coachMessages: [
+      ...(state.coachMessages ?? []),
+      { ...message, id: nanoid(), createdAt: new Date().toISOString() },
+    ].slice(-40),
+  };
 }
 
 export function setAISettings(

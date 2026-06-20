@@ -242,9 +242,31 @@ export type GoalProgress = {
   current: number;
   target: number;
   percent: number;
+  remaining: number;
+  pacePerDay?: number;
+  forecastDate?: string;
+  trend: { date: string; value: number }[];
   latestDate?: string;
   nextCheckDate?: string;
+  needsMoreData?: boolean;
+  reached?: boolean;
 };
+
+export function getRecommendedReminderTime(state: AppState): string {
+  const minutes = Object.values(state.days)
+    .flatMap((log) => Object.values(log.doneAt ?? {}))
+    .map((iso) => new Date(iso))
+    .filter((date) => Number.isFinite(date.getTime()))
+    .slice(-14)
+    .map((date) => date.getHours() * 60 + date.getMinutes());
+  if (minutes.length < 3) return state.settings.reminders.time || "20:00";
+  const avg = Math.round(
+    minutes.reduce((sum, value) => sum + value, 0) / minutes.length,
+  );
+  return `${String(Math.floor(avg / 60)).padStart(2, "0")}:${String(
+    avg % 60,
+  ).padStart(2, "0")}`;
+}
 
 export function getGoalProgress(state: AppState): GoalProgress[] {
   return Object.values(state.tasks)
@@ -266,21 +288,68 @@ export function getGoalProgress(state: AppState): GoalProgress[] {
       const target = task.goalConfig?.target ?? 0;
       if (task.goalType === "savings") {
         const current = entries.reduce((sum, entry) => sum + entry.value, 0);
+        const remaining = Math.max(0, target - current);
+        const pacePerDay = savingsPacePerDay(entries);
+        const forecastDate =
+          remaining <= 0
+            ? entries[entries.length - 1]?.date
+            : pacePerDay
+              ? addDaysISO(
+                  entries[entries.length - 1]?.date ?? todayISO(),
+                  Math.ceil(remaining / pacePerDay),
+                )
+              : undefined;
         return {
           taskId: task.id,
           title: task.title,
           type: task.goalType,
           current,
           target,
+          remaining,
           percent:
             target > 0
               ? Math.min(100, Math.round((current / target) * 100))
               : 0,
+          pacePerDay,
+          forecastDate,
+          trend: cumulativeTrend(entries),
           latestDate: entries[entries.length - 1]?.date,
+          needsMoreData: entries.length < 2 && remaining > 0,
+          reached: target > 0 && current >= target,
         };
       }
 
       const latest = entries[entries.length - 1];
+      const start =
+        "start" in task.goalConfig && typeof task.goalConfig.start === "number"
+          ? task.goalConfig.start
+          : entries[0]?.value;
+      const direction =
+        "direction" in task.goalConfig && task.goalConfig.direction
+          ? task.goalConfig.direction
+          : start !== undefined && target < start
+            ? "loss"
+            : "gain";
+      const current = latest?.value ?? start ?? 0;
+      const totalChange =
+        start !== undefined ? Math.abs(start - target) : Math.abs(current - target);
+      const moved =
+        start !== undefined
+          ? direction === "loss"
+            ? start - current
+            : current - start
+          : 0;
+      const remaining =
+        direction === "loss"
+          ? Math.max(0, current - target)
+          : Math.max(0, target - current);
+      const pacePerDay = weightPacePerDay(entries, direction);
+      const forecastDate =
+        remaining <= 0
+          ? latest?.date
+          : pacePerDay
+            ? addDaysISO(latest?.date ?? todayISO(), Math.ceil(remaining / pacePerDay))
+            : undefined;
       const checkEveryDays =
         "checkEveryDays" in task.goalConfig
           ? task.goalConfig.checkEveryDays
@@ -289,19 +358,60 @@ export function getGoalProgress(state: AppState): GoalProgress[] {
         taskId: task.id,
         title: task.title,
         type: task.goalType,
-        current: latest?.value ?? 0,
+        current,
         target,
-        percent:
-          target > 0 && latest?.value
-            ? Math.min(100, Math.round((target / latest.value) * 100))
-            : 0,
+        remaining,
+        percent: totalChange > 0 ? Math.max(0, Math.min(100, Math.round((moved / totalChange) * 100))) : 0,
+        pacePerDay,
+        forecastDate,
+        trend: entries,
         latestDate: latest?.date,
+        needsMoreData: entries.length < 2 && remaining > 0,
+        reached: remaining <= 0 && entries.length > 0,
         nextCheckDate:
           latest && checkEveryDays
             ? addDaysISO(latest.date, checkEveryDays)
             : undefined,
       };
     });
+}
+
+function cumulativeTrend(
+  entries: { date: string; value: number }[],
+): { date: string; value: number }[] {
+  let total = 0;
+  return entries.map((entry) => {
+    total += entry.value;
+    return { date: entry.date, value: total };
+  });
+}
+
+function savingsPacePerDay(entries: { date: string; value: number }[]): number | undefined {
+  if (entries.length < 2) return undefined;
+  const first = entries[0];
+  const latest = entries[entries.length - 1];
+  const days = Math.max(1, daysBetween(first.date, latest.date));
+  const total = entries.reduce((sum, entry) => sum + entry.value, 0);
+  return total > 0 ? total / days : undefined;
+}
+
+function weightPacePerDay(
+  entries: { date: string; value: number }[],
+  direction: "loss" | "gain",
+): number | undefined {
+  if (entries.length < 2) return undefined;
+  const first = entries[0];
+  const latest = entries[entries.length - 1];
+  const days = Math.max(1, daysBetween(first.date, latest.date));
+  const delta =
+    direction === "loss" ? first.value - latest.value : latest.value - first.value;
+  return delta > 0 ? delta / days : undefined;
+}
+
+function daysBetween(start: string, end: string): number {
+  const a = new Date(start + "T00:00:00").getTime();
+  const b = new Date(end + "T00:00:00").getTime();
+  return Math.round((b - a) / 86400000);
 }
 
 function addDaysISO(date: string, days: number): string {

@@ -1,5 +1,10 @@
 # Product
 
+> Sprout Planner is the first module of **Sprout Universe**, a growing family of
+> small, calm tools that share one design language. The public marketing
+> landing page for the universe lives at `/` (`src/landing/`); the Planner
+> module is served at `/app/`.
+
 ## Register
 
 product

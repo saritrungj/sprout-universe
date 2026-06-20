@@ -7,6 +7,8 @@ import TodayView from "./components/TodayView";
 import CalendarView from "./components/CalendarView";
 import Dashboard from "./components/Dashboard";
 import SettingsView from "./components/SettingsView";
+import MoodView from "./components/MoodView";
+import FocusView from "./components/FocusView";
 import RemindersRunner from "./components/RemindersRunner";
 import Splash from "./components/Splash";
 
@@ -37,7 +39,7 @@ export default function App() {
   return (
     <I18nProvider lang={state.settings.language}>
       {booting && <Splash onDone={() => setBooting(false)} />}
-      <RemindersRunner reminders={state.settings.reminders} />
+      <RemindersRunner state={state} reminders={state.settings.reminders} />
 
       <SkipToContent />
 
@@ -69,7 +71,13 @@ export default function App() {
               {tab === "calendar" && (
                 <CalendarView state={state} setState={setState} />
               )}
-              {tab === "dashboard" && <Dashboard state={state} />}
+              {tab === "focus" && (
+                <FocusView state={state} setState={setState} />
+              )}
+              {tab === "mood" && <MoodView state={state} setState={setState} />}
+              {tab === "dashboard" && (
+                <Dashboard state={state} setState={setState} />
+              )}
               {tab === "settings" && (
                 <SettingsView state={state} setState={setState} />
               )}

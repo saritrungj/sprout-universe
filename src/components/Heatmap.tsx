@@ -40,14 +40,15 @@ export default function Heatmap({ cells }: Props) {
 
   return (
     <div
-      className="bg-surface dark:bg-surface-dark-muted rounded-2xl p-4 border border-sprout-100 dark:border-sprout-950"
+      className="max-w-full overflow-hidden rounded-2xl border border-sprout-100 bg-surface p-4 dark:border-sprout-950 dark:bg-surface-dark-muted"
       aria-label={t("dash.activity")}
     >
       <h3 className="text-xs text-ink-subtle dark:text-surface-muted uppercase tracking-wide font-medium mb-3">
         {t("dash.activity")}
       </h3>
 
-      <div className="relative" style={{ paddingLeft: "28px" }}>
+      <div className="min-w-0 max-w-full overflow-x-auto pb-1">
+      <div className="relative min-w-max" style={{ paddingLeft: "28px" }}>
         {/* Month labels */}
         <div
           className="flex gap-[3px] mb-1 text-xs text-ink-subtle dark:text-surface-muted"
@@ -90,6 +91,7 @@ export default function Heatmap({ cells }: Props) {
             ))}
           </div>
         </div>
+      </div>
       </div>
 
       {/* Legend */}

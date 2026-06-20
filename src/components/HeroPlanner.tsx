@@ -12,8 +12,8 @@ import {
   Repeat2,
   Trash2,
 } from "lucide-react";
-import { AppState, Slot, addDayTask, getDayTaskIds } from "../lib/store";
-import { todayISO } from "../lib/dates";
+import { AppState, Slot, addDayTask, addMonthTask, getDayTaskIds } from "../lib/store";
+import { currentMonth, formatMonthLabel, nextMonth, todayISO } from "../lib/dates";
 import {
   MonthlyPlan,
   MonthlyPlanMonth,
@@ -66,7 +66,7 @@ function saveSavedPlan(p: SavedPlan | null) {
  * (free tier, configured via VITE_GEMINI_API_KEY):
  *  - Today: turn a goal into a few tasks for today.
  *  - Monthly: build a progressive month-by-month roadmap toward a bigger goal,
- *    then drop each month's tasks in as recurring habits when you're ready.
+ *    then drop each month's tasks into the matching month plan.
  */
 export default function HeroPlanner({ state, setState }: Props) {
   const { t, lang } = useT();
@@ -150,14 +150,12 @@ export default function HeroPlanner({ state, setState }: Props) {
     setAdded(nextAdded);
   }
 
-  /* Drop a month's tasks in as recurring habits (so they repeat every day). */
+  /* Drop a month's tasks into the matching monthly task set. */
   function applyMonth(idx: number, m: MonthlyPlanMonth) {
     let next = state;
+    const targetMonth = addMonths(currentMonth(), idx);
     for (const task of m.tasks) {
-      const [s, id] = addDayTask(next, today, task.title, {
-        slot: task.slot,
-        asTemplate: true,
-      });
+      const [s, id] = addMonthTask(next, targetMonth, task.title, task.slot);
       if (id) next = s;
     }
     setState(next);
@@ -392,6 +390,9 @@ export default function HeroPlanner({ state, setState }: Props) {
                       <span className="inline-flex items-center gap-1.5 rounded-full bg-sprout-100 px-2 py-0.5 text-[11px] font-bold text-sprout-700 dark:bg-sprout-950 dark:text-sprout-300">
                         {t("plan.monthLabel", { n: i + 1 })}
                       </span>
+                      <span className="ml-2 text-[11px] font-semibold text-ink-subtle dark:text-surface-muted">
+                        {formatMonthLabel(addMonths(currentMonth(), i), lang)}
+                      </span>
                       <p className="mt-1.5 text-sm font-semibold text-ink dark:text-surface">
                         {m.focus}
                       </p>
@@ -439,6 +440,12 @@ export default function HeroPlanner({ state, setState }: Props) {
       )}
     </div>
   );
+}
+
+function addMonths(month: string, offset: number): string {
+  let next = month;
+  for (let i = 0; i < offset; i += 1) next = nextMonth(next);
+  return next;
 }
 
 function ModeButton({

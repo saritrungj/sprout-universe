@@ -1,13 +1,5 @@
 import { useState } from "react";
-import {
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  Lock,
-  Moon,
-  MoreHorizontal,
-  X,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock } from "lucide-react";
 import { AppState } from "../lib/store";
 import {
   buildMonthGrid,
@@ -18,18 +10,29 @@ import {
   todayISO,
   weekdayLabels,
 } from "../lib/dates";
-import {
-  getDayStatus,
-  getMonthStats,
-  statusStyles,
-  DayStatus,
-} from "../lib/status";
+import { getDayStatus, getMonthStats, DayStatus } from "../lib/status";
 import { useT } from "../lib/i18n";
 import DayEditor from "./DayEditor";
 
 type Props = {
   state: AppState;
   setState: (s: AppState) => void;
+};
+
+/** Mascot-head sticker per status — the calendar's emotional "stamp". */
+const STATUS_HEAD: Record<Exclude<DayStatus, "neutral">, string> = {
+  complete: "/sprout-head-happy.png",
+  missed: "/sprout-head-sad.png",
+  "in-progress": "/sprout-head-work.png",
+  rest: "/sprout-head-rest.png",
+};
+
+const STATUS_RING: Record<DayStatus, string> = {
+  complete: "ring-sprout-400 dark:ring-sprout-600",
+  missed: "ring-red-300 dark:ring-red-700",
+  "in-progress": "ring-amber-300 dark:ring-amber-600",
+  rest: "ring-sky-300 dark:ring-sky-600",
+  neutral: "ring-sprout-300 dark:ring-sprout-600",
 };
 
 function DayStamp({
@@ -43,58 +46,29 @@ function DayStamp({
 }) {
   const isToday = date === today;
   const base =
-    "w-full aspect-square rounded-xl flex items-center justify-center text-xs font-semibold transition-all";
-  const st = statusStyles[status];
-  const todayRing =
-    isToday && status === "neutral"
-      ? "ring-2 ring-sprout-300 dark:ring-sprout-600"
-      : "";
+    "w-full aspect-square rounded-xl flex items-center justify-center transition-all";
+  const ring = isToday ? `ring-2 ${STATUS_RING[status]}` : "";
 
-  if (status === "complete") {
+  if (status === "neutral") {
     return (
       <div
-        className={`${base} ${st.stamp} ${isToday ? "ring-2 ring-sprout-300" : ""}`}
+        className={`${base} ${ring} ${isToday ? "" : "bg-surface-muted/60 dark:bg-surface-dark/60"}`}
         aria-hidden="true"
-      >
-        <Check size={15} strokeWidth={3} aria-hidden="true" />
-      </div>
+      />
     );
   }
 
-  if (status === "missed") {
-    return (
-      <div
-        className={`${base} ${st.stamp} ${isToday ? "ring-2 ring-red-300" : ""}`}
-        aria-hidden="true"
-      >
-        <X size={15} strokeWidth={3} aria-hidden="true" />
-      </div>
-    );
-  }
-
-  if (status === "in-progress") {
-    return (
-      <div
-        className={`${base} ${st.stamp} ring-2 ring-amber-300`}
-        aria-hidden="true"
-      >
-        <MoreHorizontal size={15} strokeWidth={3} aria-hidden="true" />
-      </div>
-    );
-  }
-
-  if (status === "rest") {
-    return (
-      <div
-        className={`${base} ${st.stamp} ${isToday ? "ring-2 ring-sky-300" : ""}`}
-        aria-hidden="true"
-      >
-        <Moon size={15} strokeWidth={3} aria-hidden="true" />
-      </div>
-    );
-  }
-
-  return <div className={`${base} ${todayRing}`} aria-hidden="true" />;
+  return (
+    <div className={`${base} ${ring}`} aria-hidden="true">
+      <img
+        src={STATUS_HEAD[status]}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        className="h-full w-full object-contain drop-shadow-[0_2px_4px_rgba(22,101,52,0.18)]"
+      />
+    </div>
+  );
 }
 
 export default function CalendarView({ state, setState }: Props) {
@@ -206,19 +180,14 @@ export default function CalendarView({ state, setState }: Props) {
           ))}
         </div>
 
-        <div
-          className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pt-2 text-xs text-ink-subtle dark:text-surface-muted"
-        >
-          <LegendDot className="bg-sprout-500" label={t("cal.complete")} />
-          <LegendDot
-            className="bg-red-100 dark:bg-red-950"
-            label={t("cal.missed")}
-          />
-          <LegendDot
-            className="bg-amber-100 dark:bg-amber-950"
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pt-2 text-xs text-ink-subtle dark:text-surface-muted">
+          <LegendHead src="/sprout-head-happy.png" label={t("cal.complete")} />
+          <LegendHead src="/sprout-head-sad.png" label={t("cal.missed")} />
+          <LegendHead
+            src="/sprout-head-work.png"
             label={t("cal.inProgress")}
           />
-          <LegendDot className="bg-sky-100 dark:bg-sky-950" label={t("status.rest")} />
+          <LegendHead src="/sprout-head-rest.png" label={t("status.rest")} />
         </div>
       </section>
 
@@ -242,19 +211,13 @@ export default function CalendarView({ state, setState }: Props) {
           />
         </div>
         <div className="mt-5 grid gap-2 text-xs text-ink-subtle dark:text-surface-muted">
-          <LegendDot className="bg-sprout-500" label={t("cal.complete")} />
-          <LegendDot
-            className="bg-amber-100 dark:bg-amber-950"
+          <LegendHead src="/sprout-head-happy.png" label={t("cal.complete")} />
+          <LegendHead
+            src="/sprout-head-work.png"
             label={t("cal.inProgress")}
           />
-          <LegendDot
-            className="bg-red-100 dark:bg-red-950"
-            label={t("cal.missed")}
-          />
-          <LegendDot
-            className="bg-sky-100 dark:bg-sky-950"
-            label={t("status.rest")}
-          />
+          <LegendHead src="/sprout-head-sad.png" label={t("cal.missed")} />
+          <LegendHead src="/sprout-head-rest.png" label={t("status.rest")} />
         </div>
       </aside>
 
@@ -298,10 +261,16 @@ function InsightRow({
   );
 }
 
-function LegendDot({ className, label }: { className: string; label: string }) {
+function LegendHead({ src, label }: { src: string; label: string }) {
   return (
     <span className="flex items-center gap-2">
-      <span className={`inline-block h-3 w-3 rounded ${className}`} />
+      <img
+        src={src}
+        alt=""
+        aria-hidden="true"
+        loading="lazy"
+        className="h-5 w-5 flex-none object-contain"
+      />
       {label}
     </span>
   );

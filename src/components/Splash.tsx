@@ -8,11 +8,9 @@ type Props = {
   minDuration?: number;
 };
 
-const BRAND_TEXT = "Sprout.Planner";
-
 /**
- * Minimal launch splash: website logo plus a typewritten brand welcome.
- * Fades out after minDuration.
+ * Minimal launch splash: just the breathing website logo over a soft sprout
+ * glow — calm and wordless. Fades out after minDuration.
  */
 export default function Splash({ onDone, minDuration = 3000 }: Props) {
   const { t } = useT();
@@ -86,21 +84,6 @@ export default function Splash({ onDone, minDuration = 3000 }: Props) {
               "logo-arrive 0.72s cubic-bezier(0.16, 1, 0.3, 1) 0.12s forwards",
           }}
         />
-
-        <p
-          className="brand-type mt-5 max-w-[86vw] whitespace-nowrap text-center font-sans text-3xl font-bold tracking-normal text-black dark:text-surface sm:text-4xl"
-          style={
-            {
-              "--brand-chars": BRAND_TEXT.length,
-              animation:
-                "brand-reveal 1.2s steps(var(--brand-chars)) 0.72s forwards, brand-caret 0.72s step-end 0.72s 4",
-            } as React.CSSProperties
-          }
-        >
-          <span className="text-sprout-700 dark:text-sprout-400">Sprout</span>
-          <span className="text-sprout-500 dark:text-sprout-300">.</span>
-          <span>Planner</span>
-        </p>
       </div>
 
       <style>{`
@@ -140,19 +123,6 @@ export default function Splash({ onDone, minDuration = 3000 }: Props) {
           22%  { opacity: 0.5; }
           46%  { opacity: 0; transform: translateX(42%) rotate(-12deg); }
           100% { opacity: 0; transform: translateX(42%) rotate(-12deg); }
-        }
-        .brand-type {
-          width: 0;
-          overflow: hidden;
-          border-right: 0.08em solid currentColor;
-        }
-        @keyframes brand-reveal {
-          from { width: 0; }
-          to   { width: calc(var(--brand-chars) * 0.64em); }
-        }
-        @keyframes brand-caret {
-          0%, 100% { border-color: transparent; }
-          50%      { border-color: currentColor; }
         }
       `}</style>
     </div>

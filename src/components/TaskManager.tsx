@@ -2,9 +2,12 @@ import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import {
   AppState,
-  addTask,
+  addMonthTask,
+  getMonthPlan,
+  removeMainTask,
 } from "../lib/store";
 import { useT } from "../lib/i18n";
+import { currentMonth, formatMonthLabel } from "../lib/dates";
 
 type Props = {
   state: AppState;
@@ -17,8 +20,10 @@ export default function TaskManager({
   setState,
   embedded = false,
 }: Props) {
-  const { t } = useT();
-  const templateIds = state.templates ?? [];
+  const { t, locale } = useT();
+  const [month, setMonth] = useState(currentMonth());
+  const monthPlan = getMonthPlan(state, month);
+  const templateIds = monthPlan.mainTaskIds;
   const [newTitle, setNewTitle] = useState("");
 
   function handleAdd(e: React.FormEvent) {
@@ -30,18 +35,13 @@ export default function TaskManager({
         newTitle.trim().toLocaleLowerCase(),
     );
     if (duplicate) return;
-    const [s2, id] = addTask(state, newTitle.trim(), undefined, {
-      isTemplate: true,
-    });
-    setState({ ...s2, templates: [...new Set([...(s2.templates ?? []), id])] });
+    const [s2] = addMonthTask(state, month, newTitle.trim());
+    setState(s2);
     setNewTitle("");
   }
 
   function handleRemove(taskId: string) {
-    setState({
-      ...state,
-      templates: (state.templates ?? []).filter((id) => id !== taskId),
-    });
+    setState(removeMainTask(state, month, taskId));
   }
 
   return (
@@ -57,6 +57,22 @@ export default function TaskManager({
           {t("taskmgr.title")}
         </h3>
       )}
+      <label className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-surface-muted px-3 py-2 dark:bg-surface-dark">
+        <span className="text-xs font-semibold uppercase tracking-wide text-ink-subtle dark:text-surface-muted">
+          {t("taskmgr.month")}
+        </span>
+        <input
+          type="month"
+          value={month}
+          onChange={(e) => setMonth(e.target.value || currentMonth())}
+          aria-label={t("taskmgr.month")}
+          className="min-h-[40px] rounded-xl border border-sprout-100 bg-surface px-3 py-1.5 text-sm font-semibold text-ink dark:border-sprout-900 dark:bg-surface-dark dark:text-surface"
+        />
+      </label>
+
+      <p className="text-xs text-ink-subtle dark:text-surface-muted">
+        {t("taskmgr.monthHelp", { month: formatMonthLabel(month, locale) })}
+      </p>
 
       {templateIds.length === 0 && (
         <p className="text-xs text-ink-subtle dark:text-surface-muted">

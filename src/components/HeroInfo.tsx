@@ -3,9 +3,9 @@ import { Info, X, Sparkles, AlertTriangle } from "lucide-react";
 import { useT } from "../lib/i18n";
 
 /**
- * Small info affordance for the hero's top-left corner. Opens a dialog with a
- * quick "how to use" and an important notice that data lives only in this
- * browser (localStorage) and can be lost.
+ * Small info affordance pinned to the hero's top-right corner, wrapped in a
+ * soft breathing sprout glow. Opens a dialog with a quick "how to use" and an
+ * important notice that data lives only in this browser (localStorage).
  */
 export default function HeroInfo() {
   const { t } = useT();
@@ -23,14 +23,21 @@ export default function HeroInfo() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label={t("info.aria")}
-        className="absolute left-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-sprout-100 bg-surface/80 text-sprout-600 shadow-sm backdrop-blur-md transition-all hover:-translate-y-0.5 hover:bg-sprout-50 hover:text-sprout-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-sprout-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface dark:border-sprout-900 dark:bg-surface-dark-muted/80 dark:text-sprout-400 dark:hover:bg-sprout-950 dark:focus-visible:ring-offset-surface-dark"
-      >
-        <Info size={18} aria-hidden="true" />
-      </button>
+      <div className="absolute right-4 top-4 z-20">
+        {/* Soft breathing sprout glow behind the button */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -inset-1.5 -z-10 rounded-full bg-sprout-400/40 blur-md motion-safe:animate-pulse dark:bg-sprout-500/30"
+        />
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label={t("info.aria")}
+          className="relative flex h-10 w-10 items-center justify-center rounded-full border border-sprout-100 bg-surface/80 text-sprout-600 shadow-[0_0_14px_rgba(34,197,94,0.35)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:bg-sprout-50 hover:text-sprout-700 hover:shadow-[0_0_20px_rgba(34,197,94,0.5)] focus:outline-none focus-visible:ring-2 focus-visible:ring-sprout-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface dark:border-sprout-900 dark:bg-surface-dark-muted/80 dark:text-sprout-400 dark:hover:bg-sprout-950 dark:focus-visible:ring-offset-surface-dark"
+        >
+          <Info size={18} aria-hidden="true" />
+        </button>
+      </div>
 
       {open && (
         <div

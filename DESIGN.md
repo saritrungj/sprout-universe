@@ -106,6 +106,11 @@ components:
 
 # Design System: Sprout Planner
 
+> Sprout Planner is the first module of **Sprout Universe**. The same system
+> below dresses the universe's marketing landing page (`src/landing/`) — one
+> sprout-green family, tinted neutrals, 16px control radius, flat-at-rest, and
+> the jelly-sprout mascots as the brand imagery.
+
 ## 1. Overview
 
 **Creative North Star: "The Living Terrarium"**

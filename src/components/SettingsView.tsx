@@ -1,14 +1,29 @@
-import { useState } from "react";
-import { Moon, Sun, Bell, Sparkles, Leaf, Repeat2 } from "lucide-react";
+import { useRef, useState } from "react";
+import {
+  Moon,
+  Sun,
+  Bell,
+  Sparkles,
+  Leaf,
+  Repeat2,
+  Download,
+  Upload,
+  RotateCcw,
+  DatabaseBackup,
+} from "lucide-react";
 import {
   AppState,
   MascotKey,
+  defaultState,
   setZenMode,
   setMascot,
   setReminders,
+  setSound,
   setTheme,
 } from "../lib/store";
-import { getStreak, getDaysTended } from "../lib/status";
+import { playSound } from "../lib/sound";
+import { getStreak, getDaysTended, getRecommendedReminderTime } from "../lib/status";
+import { exportBackup, parseBackup, backupFilename } from "../lib/storage";
 import {
   notifSupported,
   notifPermission,
@@ -37,10 +52,57 @@ export default function SettingsView({ state, setState }: Props) {
   const { settings } = state;
   const streak = getStreak(state);
   const tended = getDaysTended(state);
+  const recommendedReminder = getRecommendedReminderTime(state);
   const [notifState, setNotifState] =
     useState<NotificationPermission>(notifPermission());
   // Bump to replay the companion's hop animation on tap.
   const [playKey, setPlayKey] = useState(0);
+
+  // Backup & restore
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [backupMsg, setBackupMsg] = useState<{ text: string; ok: boolean }>();
+
+  function handleExport() {
+    const blob = new Blob([exportBackup(state)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = backupFilename();
+    a.click();
+    URL.revokeObjectURL(url);
+    setBackupMsg({ text: t("settings.exportOk"), ok: true });
+  }
+
+  function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-importing the same file
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const next = parseBackup(String(reader.result ?? ""));
+      if (next) {
+        setState(next);
+        setBackupMsg({ text: t("settings.importOk"), ok: true });
+      } else {
+        setBackupMsg({ text: t("settings.importErr"), ok: false });
+      }
+    };
+    reader.onerror = () =>
+      setBackupMsg({ text: t("settings.importErr"), ok: false });
+    reader.readAsText(file);
+  }
+
+  function handleReset() {
+    setState(defaultState);
+    try {
+      localStorage.removeItem("sprout-planner:aiplan");
+    } catch {
+      /* ignore */
+    }
+    setConfirmReset(false);
+    setBackupMsg({ text: t("settings.resetOk"), ok: true });
+  }
 
   async function toggleReminders() {
     if (!settings.reminders.enabled) {
@@ -87,6 +149,20 @@ export default function SettingsView({ state, setState }: Props) {
           >
             <div className="flex flex-col divide-y divide-sprout-100 dark:divide-sprout-950">
               <Row
+                title={t("settings.sound")}
+                desc={t("settings.soundDesc")}
+                control={
+                  <Toggle
+                    checked={settings.sound !== false}
+                    onChange={(v) => {
+                      setState(setSound(state, v));
+                      if (v) playSound("complete", true);
+                    }}
+                    label={t("settings.sound")}
+                  />
+                }
+              />
+              <Row
                 title={t("settings.zen")}
                 desc={t("settings.zenDesc")}
                 control={
@@ -109,7 +185,7 @@ export default function SettingsView({ state, setState }: Props) {
                 }
               >
                 {settings.reminders.enabled && (
-                  <div className="mt-3 flex items-center gap-2">
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
                     <Bell
                       size={15}
                       aria-hidden="true"
@@ -124,6 +200,28 @@ export default function SettingsView({ state, setState }: Props) {
                       onChange={(e) => changeReminderTime(e.target.value)}
                       className="rounded-xl border border-gray-200 bg-surface px-3 py-1.5 text-sm text-ink focus:border-sprout-400 dark:border-gray-700 dark:bg-surface-dark dark:text-surface"
                     />
+                    <select
+                      value={settings.reminders.mode ?? "fixed"}
+                      onChange={(e) =>
+                        setState(
+                          setReminders(state, {
+                            ...settings.reminders,
+                            mode: e.target.value as "fixed" | "smart",
+                          }),
+                        )
+                      }
+                      className="min-h-[40px] rounded-xl border border-sprout-100 bg-surface px-3 py-1.5 text-sm text-ink dark:border-sprout-900 dark:bg-surface-dark dark:text-surface"
+                    >
+                      <option value="fixed">{t("settings.reminderFixed")}</option>
+                      <option value="smart">{t("settings.reminderSmart")}</option>
+                    </select>
+                    {settings.reminders.mode === "smart" && (
+                      <span className="text-xs font-semibold text-sprout-700 dark:text-sprout-300">
+                        {t("settings.reminderRecommended", {
+                          time: recommendedReminder,
+                        })}
+                      </span>
+                    )}
                   </div>
                 )}
                 {!notifSupported() && (
@@ -164,6 +262,86 @@ export default function SettingsView({ state, setState }: Props) {
                 </div>
               }
             />
+          </Section>
+
+          {/* Backup & restore */}
+          <Section
+            icon={<DatabaseBackup size={18} aria-hidden="true" />}
+            title={t("settings.backup")}
+            desc={t("settings.backupDesc")}
+          >
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={handleExport}
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-sprout-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-sprout-700"
+              >
+                <Download size={16} aria-hidden="true" />
+                {t("settings.export")}
+              </button>
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-sprout-200 bg-surface px-4 py-2 text-sm font-semibold text-sprout-700 transition-colors hover:bg-sprout-50 dark:border-sprout-800 dark:bg-surface-dark-muted dark:text-sprout-300 dark:hover:bg-sprout-950"
+              >
+                <Upload size={16} aria-hidden="true" />
+                {t("settings.import")}
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="application/json,.json"
+                onChange={handleImportFile}
+                className="hidden"
+              />
+
+              {!confirmReset ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setConfirmReset(true);
+                    setBackupMsg(undefined);
+                  }}
+                  className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-red-200 bg-surface px-4 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 dark:border-red-900/60 dark:bg-surface-dark-muted dark:text-red-400 dark:hover:bg-red-950/40"
+                >
+                  <RotateCcw size={16} aria-hidden="true" />
+                  {t("settings.reset")}
+                </button>
+              ) : (
+                <span className="inline-flex flex-wrap items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 dark:border-red-900/60 dark:bg-red-950/30">
+                  <span className="text-xs font-medium text-red-700 dark:text-red-300">
+                    {t("settings.resetConfirm")}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    className="inline-flex min-h-[40px] items-center rounded-lg bg-red-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+                  >
+                    {t("settings.resetConfirmYes")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmReset(false)}
+                    className="inline-flex min-h-[40px] items-center rounded-lg px-3 py-1.5 text-sm font-semibold text-ink-muted transition-colors hover:bg-surface-muted dark:text-surface-muted dark:hover:bg-surface-dark"
+                  >
+                    {t("settings.cancel")}
+                  </button>
+                </span>
+              )}
+            </div>
+
+            {backupMsg && (
+              <p
+                role="status"
+                className={`mt-3 text-sm font-medium ${
+                  backupMsg.ok
+                    ? "text-sprout-700 dark:text-sprout-300"
+                    : "text-red-600 dark:text-red-400"
+                }`}
+              >
+                {backupMsg.text}
+              </p>
+            )}
           </Section>
         </div>
 

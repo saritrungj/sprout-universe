@@ -1,9 +1,10 @@
 // Sprout Planner service worker — app-shell offline cache.
 // Bumped CACHE version invalidates old caches on activate.
-const CACHE = "sprout-v2";
+const CACHE = "sprout-v3";
 const PRECACHE = [
   "/",
   "/index.html",
+  "/app/",
   "/manifest.webmanifest",
   "/sprout-logo.png",
   "/sprout-success.png",
@@ -54,17 +55,27 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Navigations: network-first, fall back to cached app shell when offline.
+  // Navigations: network-first, fall back to the matching cached shell when
+  // offline. The Planner module lives under /app/; everything else is the
+  // Sprout Universe landing at /.
   if (request.mode === "navigate") {
+    const shell = new URL(request.url).pathname.startsWith("/app")
+      ? "/app/"
+      : "/";
     event.respondWith(
       fetch(request)
         .then((res) => {
           const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put("/", copy));
+          caches.open(CACHE).then((c) => c.put(shell, copy));
           return res;
         })
         .catch(() =>
-          caches.match("/").then((r) => r || caches.match("/index.html")),
+          caches
+            .match(shell)
+            .then(
+              (r) =>
+                r || caches.match(shell === "/app/" ? "/app/" : "/index.html"),
+            ),
         ),
     );
     return;

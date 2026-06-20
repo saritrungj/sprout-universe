@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Reminders } from "./store";
+import { playSound } from "./sound";
 
 export function notifSupported(): boolean {
   return typeof window !== "undefined" && "Notification" in window;
@@ -51,7 +52,11 @@ async function fire(body: string) {
  * time and reschedules after firing. Only runs while a tab is open — a true
  * background reminder needs push infrastructure we don't have.
  */
-export function useReminders(reminders: Reminders, body: string) {
+export function useReminders(
+  reminders: Reminders,
+  body: string,
+  sound = true,
+) {
   useEffect(() => {
     if (
       !reminders.enabled ||
@@ -64,10 +69,11 @@ export function useReminders(reminders: Reminders, body: string) {
     const schedule = () => {
       timer = window.setTimeout(() => {
         void fire(body);
+        playSound("notify", sound);
         schedule();
       }, msUntil(reminders.time));
     };
     schedule();
     return () => window.clearTimeout(timer);
-  }, [reminders.enabled, reminders.time, body]);
+  }, [reminders.enabled, reminders.time, body, sound]);
 }

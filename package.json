@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "license": "LicenseRef-Proprietary",
   "scripts": {
     "dev": "vite",
     "test:domain": "esbuild src/lib/domain.test.ts --bundle --platform=node --format=esm --outfile=.tmp/domain.test.mjs && node .tmp/domain.test.mjs",
