@@ -1,5 +1,12 @@
+// Format a Date as YYYY-MM-DD using the *local* timezone of the device,
+// not UTC. (toISOString() would shift the day across the UTC boundary.)
+export function toLocalISO(date: Date): string {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  return toLocalISO(new Date());
 }
 
 export function monthKey(date: string): string {
@@ -77,7 +84,7 @@ export function buildHeatmapDates(weeks = 26): string[] {
   for (let i = 0; i < weeks * 7; i++) {
     const d = new Date(start);
     d.setDate(start.getDate() + i);
-    dates.push(d.toISOString().slice(0, 10));
+    dates.push(toLocalISO(d));
   }
   return dates;
 }

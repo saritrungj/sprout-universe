@@ -8,6 +8,7 @@ import {
   Sun,
   Moon,
   Clock,
+  Flame,
   Sparkles,
 } from "lucide-react";
 import {
@@ -36,6 +37,7 @@ import InstallButton from "./InstallButton";
 import Celebration from "./Celebration";
 import HeroPlanner from "./HeroPlanner";
 import HeroInfo from "./HeroInfo";
+import ProgressRing from "./ProgressRing";
 
 type Props = {
   state: AppState;
@@ -321,14 +323,17 @@ export default function TodayView({ state, setState }: Props) {
           {!zen && !allDone && (
             <div className="order-1 flex justify-center lg:order-2 lg:justify-end">
               <div className="relative flex h-64 w-64 items-center justify-center sm:h-72 sm:w-72">
+                {/* Soft layered glows — green base + a warm streak ember. */}
                 <span
                   aria-hidden="true"
                   className="absolute h-48 w-48 rounded-full bg-sprout-200/55 blur-3xl dark:bg-sprout-600/25"
                 />
                 <span
                   aria-hidden="true"
-                  className="absolute right-6 top-8 h-16 w-16 rounded-full bg-amber-300/45 blur-2xl dark:bg-amber-500/25"
+                  className="absolute right-8 top-10 h-16 w-16 rounded-full bg-amber-300/40 blur-2xl dark:bg-amber-500/25"
                 />
+
+                {/* Living centerpiece — the streak sprout, gently floating. */}
                 <img
                   src={streakMascot}
                   alt=""
@@ -338,18 +343,50 @@ export default function TodayView({ state, setState }: Props) {
                   className="relative h-48 w-48 object-contain drop-shadow-[0_22px_34px_rgba(22,101,52,0.2)] sm:h-56 sm:w-56"
                   style={{ animation: "streak-float 4.8s ease-in-out infinite" }}
                 />
-                <div className="absolute right-2 top-7 flex min-h-20 min-w-20 flex-col items-center justify-center rounded-full border border-amber-200 bg-amber-50/95 px-3 text-center shadow-[0_16px_36px_rgba(245,158,11,0.22)] dark:border-amber-800 dark:bg-amber-950/90">
-                  <Sparkles
-                    size={15}
-                    aria-hidden="true"
-                    className="mb-0.5 text-amber-500 dark:text-amber-300"
-                  />
-                  <span className="font-sans text-2xl font-bold leading-none tabular-nums text-amber-600 dark:text-amber-300">
-                    {streakDays}
-                  </span>
-                  <span className="mt-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-200">
-                    {t("unit.dayShort")}
-                  </span>
+
+                {/* Floating chip — streak flame + day count. */}
+                <div
+                  className="absolute -right-1 top-5 sm:-right-3"
+                  style={{ animation: "streak-float 5.4s ease-in-out 0.5s infinite" }}
+                >
+                  <div className="flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50/95 px-3 py-2 shadow-[0_18px_40px_-14px_rgba(245,158,11,0.5)] backdrop-blur-sm dark:border-amber-800 dark:bg-amber-950/90">
+                    <Flame
+                      size={20}
+                      fill="currentColor"
+                      aria-hidden="true"
+                      className="text-amber-500 dark:text-amber-300"
+                    />
+                    <div className="leading-tight">
+                      <span className="block font-sans text-xl font-bold leading-none tabular-nums text-amber-600 dark:text-amber-300">
+                        {streakDays}
+                      </span>
+                      <span className="mt-0.5 block text-[10px] font-bold uppercase tracking-wide text-amber-700/80 dark:text-amber-200/80">
+                        {t("unit.dayShort")}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Floating chip — today's live completion ring. */}
+                <div
+                  className="absolute -left-2 bottom-6 sm:-left-4"
+                  style={{ animation: "streak-float 5.8s ease-in-out 0.9s infinite" }}
+                >
+                  <div className="flex items-center gap-2.5 rounded-2xl border border-sprout-100 bg-surface/95 px-3 py-2 shadow-[0_18px_40px_-14px_rgba(22,101,52,0.32)] backdrop-blur-sm dark:border-sprout-900 dark:bg-surface-dark-muted/95">
+                    <ProgressRing pct={displayPct} status={status} size={44}>
+                      <span className="font-sans text-[10px] font-bold tabular-nums text-ink dark:text-surface">
+                        {displayPct}
+                      </span>
+                    </ProgressRing>
+                    <div className="leading-tight">
+                      <span className="block font-sans text-sm font-bold leading-none tabular-nums text-sprout-700 dark:text-sprout-300">
+                        {t("today.count", { done, total })}
+                      </span>
+                      <span className="mt-0.5 block text-[10px] font-bold uppercase tracking-wide text-ink-subtle dark:text-surface-muted">
+                        {t("day.today")}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

@@ -14,7 +14,11 @@ export function loadState(): AppState {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return defaultState;
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(raw, (key, value) =>
+      key === "__proto__" || key === "constructor" || key === "prototype"
+        ? undefined
+        : value,
+    );
     return migrateState({
       ...defaultState,
       ...parsed,
@@ -90,7 +94,6 @@ export function migrateState(raw: AppState): AppState {
     templates,
     focusSessions: raw.focusSessions ?? [],
     moodLogs: raw.moodLogs ?? {},
-    coachMessages: raw.coachMessages ?? [],
     settings: {
       ...raw.settings,
       reminders: {
@@ -139,45 +142,62 @@ export function backupFilename(): string {
  * Parse a backup file (or a raw exported AppState) back into a usable, merged
  * and migrated AppState. Returns null when the text isn't a valid backup.
  */
+/** A plain JSON object (not null, not an array). */
+function isObj(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
 export function parseBackup(text: string): AppState | null {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(text);
+    // Reviver strips prototype-pollution keys at parse time: an imported file
+    // could carry a task id / day key of "__proto__" that would otherwise hit a
+    // `tasks[id] = …` bracket-assignment downstream and mutate Object.prototype.
+    parsed = JSON.parse(text, (key, value) =>
+      key === "__proto__" || key === "constructor" || key === "prototype"
+        ? undefined
+        : value,
+    );
   } catch {
     return null;
   }
-  if (!parsed || typeof parsed !== "object") return null;
+  if (!isObj(parsed)) return null;
 
   // Accept both the wrapped backup ({ app, state }) and a bare AppState.
   const wrapper = parsed as Partial<BackupFile> & Record<string, unknown>;
   const raw =
-    wrapper.app === BACKUP_APP && wrapper.state
-      ? (wrapper.state as Record<string, unknown>)
-      : (parsed as Record<string, unknown>);
+    wrapper.app === BACKUP_APP && isObj(wrapper.state)
+      ? wrapper.state
+      : parsed;
 
   // Must look like our shape, not some arbitrary JSON file.
-  if (
-    !raw ||
-    typeof raw !== "object" ||
-    !("tasks" in raw || "days" in raw || "settings" in raw)
-  ) {
+  if (!("tasks" in raw || "days" in raw || "settings" in raw)) {
     return null;
   }
 
-  const rawSettings = (raw.settings ?? {}) as Record<string, unknown>;
+  // Coerce each top-level field to its expected container type so a malformed
+  // (but shaped) file can't crash migrate or smuggle in unexpected structures.
+  const rawSettings = isObj(raw.settings) ? raw.settings : {};
   return migrateState({
     ...defaultState,
-    ...(raw as Partial<AppState>),
+    tasks: isObj(raw.tasks) ? (raw.tasks as AppState["tasks"]) : {},
+    months: isObj(raw.months) ? (raw.months as AppState["months"]) : {},
+    days: isObj(raw.days) ? (raw.days as AppState["days"]) : {},
+    moodLogs: isObj(raw.moodLogs) ? (raw.moodLogs as AppState["moodLogs"]) : {},
+    focusSessions: Array.isArray(raw.focusSessions)
+      ? (raw.focusSessions as AppState["focusSessions"])
+      : [],
+    templates: Array.isArray(raw.templates) ? (raw.templates as string[]) : [],
     settings: {
       ...defaultState.settings,
       ...rawSettings,
       ai: {
         ...defaultState.settings.ai,
-        ...((rawSettings.ai as Record<string, unknown>) ?? {}),
+        ...(isObj(rawSettings.ai) ? rawSettings.ai : {}),
       },
       reminders: {
         ...defaultState.settings.reminders,
-        ...((rawSettings.reminders as Record<string, unknown>) ?? {}),
+        ...(isObj(rawSettings.reminders) ? rawSettings.reminders : {}),
       },
     },
   } as AppState);

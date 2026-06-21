@@ -1,13 +1,7 @@
 import { useMemo, useState } from "react";
-import { Heart, Loader2, Send, Smile, CloudSun, BatteryMedium } from "lucide-react";
-import {
-  AppState,
-  MoodKey,
-  addCoachMessage,
-  setMoodLog,
-} from "../lib/store";
+import { Heart, Smile, CloudSun, BatteryMedium } from "lucide-react";
+import { AppState, MoodKey, setMoodLog } from "../lib/store";
 import { todayISO } from "../lib/dates";
-import { requestCloudAI } from "../lib/ai";
 import { useT } from "../lib/i18n";
 
 type Props = {
@@ -24,72 +18,18 @@ const MOODS: { key: MoodKey; src: string; tone: string }[] = [
 ];
 
 export default function MoodView({ state, setState }: Props) {
-  const { t, lang } = useT();
+  const { t } = useT();
   const today = todayISO();
   const existing = state.moodLogs[today];
   const [mood, setMood] = useState<MoodKey>(existing?.mood ?? "calm");
   const [energy, setEnergy] = useState(existing?.energy ?? 3);
   const [gratitude, setGratitude] = useState(existing?.gratitude ?? "");
   const [vent, setVent] = useState(existing?.vent ?? "");
-  const [prompt, setPrompt] = useState("");
-  const [busy, setBusy] = useState(false);
   const week = useMemo(() => lastSevenDays(today), [today]);
   const selectedMood = MOODS.find((item) => item.key === mood) ?? MOODS[1];
 
   function saveMood() {
     setState(setMoodLog(state, today, { mood, energy, gratitude, vent }));
-  }
-
-  async function askCoach(e: React.FormEvent) {
-    e.preventDefault();
-    const clean = prompt.trim();
-    if (!clean || busy) return;
-    const withUser = addCoachMessage(state, { role: "user", text: clean });
-    setState(withUser);
-    setPrompt("");
-    if (!state.settings.ai.endpoint.trim()) {
-      setState(
-        addCoachMessage(withUser, {
-          role: "assistant",
-          text: t("mood.coachNeedsEndpoint"),
-        }),
-      );
-      return;
-    }
-    setBusy(true);
-    try {
-      const response = await requestCloudAI({
-        settings: state.settings.ai,
-        mode: "chat",
-        prompt: [
-          `Mood: ${mood}`,
-          `Energy: ${energy}/5`,
-          gratitude ? `Gratitude: ${gratitude}` : "",
-          vent ? `Context: ${vent}` : "",
-          `User asks: ${clean}`,
-        ]
-          .filter(Boolean)
-          .join("\n"),
-        language: lang,
-        date: today,
-        existingTasks: [],
-      });
-      setState(
-        addCoachMessage(withUser, {
-          role: "assistant",
-          text: response.answer || t("mood.coachFallback"),
-        }),
-      );
-    } catch {
-      setState(
-        addCoachMessage(withUser, {
-          role: "assistant",
-          text: t("ai.error"),
-        }),
-      );
-    } finally {
-      setBusy(false);
-    }
   }
 
   return (
@@ -229,48 +169,6 @@ export default function MoodView({ state, setState }: Props) {
                 );
               })}
             </div>
-          </section>
-
-          <section className="rounded-2xl border border-sprout-100 bg-surface p-5 dark:border-sprout-900 dark:bg-surface-dark-muted">
-            <h2 className="text-base font-bold text-ink dark:text-surface">
-              {t("mood.coach")}
-            </h2>
-            <div className="mt-3 flex max-h-64 flex-col gap-2 overflow-y-auto">
-              {state.coachMessages.length === 0 ? (
-                <p className="text-sm text-ink-subtle dark:text-surface-muted">
-                  {t("mood.coachEmpty")}
-                </p>
-              ) : (
-                state.coachMessages.slice(-8).map((message) => (
-                  <div
-                    key={message.id}
-                    className={`rounded-2xl px-3 py-2 text-sm ${
-                      message.role === "user"
-                        ? "ml-6 bg-sprout-600 text-white"
-                        : "mr-6 bg-surface-muted text-ink-muted dark:bg-surface-dark dark:text-surface-muted"
-                    }`}
-                  >
-                    {message.text}
-                  </div>
-                ))
-              )}
-            </div>
-            <form onSubmit={askCoach} className="mt-3 flex gap-2">
-              <input
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder={t("mood.coachPlaceholder")}
-                className="min-w-0 flex-1 rounded-xl border border-sprout-100 bg-surface-muted px-3 py-2 text-sm dark:border-sprout-900 dark:bg-surface-dark"
-              />
-              <button
-                type="submit"
-                disabled={busy}
-                aria-label={t("ai.ask")}
-                className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl bg-sprout-600 text-white disabled:opacity-60"
-              >
-                {busy ? <Loader2 size={17} className="animate-spin" /> : <Send size={17} />}
-              </button>
-            </form>
           </section>
         </aside>
       </div>

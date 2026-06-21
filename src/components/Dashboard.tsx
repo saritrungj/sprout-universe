@@ -9,11 +9,14 @@ import {
   Check,
   Trash2,
   Target,
+  Timer,
+  Smile,
 } from "lucide-react";
 import {
   AppState,
   GoalType,
   GoalConfig,
+  MoodKey,
   addDayTask,
   removeTask,
   setGoalEntry,
@@ -30,17 +33,25 @@ import {
   getHeatmapData,
   getDayStatus,
   getGoalProgress,
+  getFocusStats,
+  getMoodSummary,
   DayStatus,
 } from "../lib/status";
 import {
-  downloadDashboard,
-  shareDashboard,
+  renderSummaryBlob,
+  downloadBlob,
+  shareBlob,
+  exportFilename,
   ExportRatio,
+  ExportSummary,
+  ExportStampCell,
 } from "../lib/export";
 import { useCountUp } from "../lib/useCountUp";
+import { useProcessing } from "../lib/useProcessing";
 import { TFn, useT } from "../lib/i18n";
 import Heatmap from "./Heatmap";
 import StreakCard from "./StreakCard";
+import LoadingOverlay from "./LoadingOverlay";
 
 type Props = { state: AppState; setState: (s: AppState) => void };
 
@@ -51,6 +62,7 @@ export default function Dashboard({ state, setState }: Props) {
   const [ratio, setRatio] = useState<ExportRatio>("9:16");
   const [busy, setBusy] = useState<"save" | "share" | null>(null);
   const [imgMsg, setImgMsg] = useState("");
+  const { processing, run } = useProcessing();
   const month = currentMonth();
   const streak = getStreak(state);
   const stats = getMonthStats(state, month);
@@ -63,11 +75,15 @@ export default function Dashboard({ state, setState }: Props) {
     todayStatus === "in-progress" || todayStatus === "neutral";
 
   async function handleSave() {
-    if (!exportRef.current || busy) return;
+    if (busy) return;
     setBusy("save");
     setImgMsg("");
     try {
-      await downloadDashboard(exportRef.current, ratio);
+      // Render to 100% first; only then write the file to the device.
+      const blob = await run(t("proc.exportImage"), () =>
+        renderSummaryBlob(buildSummary(), ratio),
+      );
+      downloadBlob(blob, exportFilename(ratio));
       setImgMsg(t("dash.saved"));
     } catch {
       setImgMsg(t("dash.imgError"));
@@ -77,11 +93,14 @@ export default function Dashboard({ state, setState }: Props) {
   }
 
   async function handleShare() {
-    if (!exportRef.current || busy) return;
+    if (busy) return;
     setBusy("share");
     setImgMsg("");
     try {
-      const result = await shareDashboard(exportRef.current, ratio);
+      const blob = await run(t("proc.exportImage"), () =>
+        renderSummaryBlob(buildSummary(), ratio),
+      );
+      const result = await shareBlob(blob, exportFilename(ratio));
       if (result === "downloaded") setImgMsg(t("dash.shareFallback"));
       else if (result === "shared") setImgMsg(t("dash.shared"));
       else setImgMsg("");
@@ -90,6 +109,65 @@ export default function Dashboard({ state, setState }: Props) {
     } finally {
       setBusy(null);
     }
+  }
+
+  /** Assemble the designed summary card data from current app state. */
+  function buildSummary(): ExportSummary {
+    const focus = getFocusStats(state);
+    const mood = getMoodSummary(state);
+    const today = todayISO();
+    const grid = buildMonthGrid(month);
+    const stamps: ExportStampCell[] = grid.flat().map((date) => {
+      if (!date) return null;
+      const status = getDayStatus(state, date);
+      const isFuture = date > today;
+      return {
+        day: parseInt(date.slice(8), 10),
+        color: isFuture ? "#eef8f1" : EXPORT_STATUS_COLOR[status],
+        today: date === today,
+      };
+    });
+
+    const exportStats = [
+      { label: t("dash.completion"), value: `${stats.completionPct}%`, accent: true },
+      { label: t("dash.greenDays"), value: `${stats.greenDays}` },
+      { label: t("dash.tasksDone"), value: `${stats.tasksCompleted}` },
+      {
+        label: t("dash.bestStreak"),
+        value: `${streak.best}${t("unit.dayShort")}`,
+      },
+      {
+        label: t("nav.focus"),
+        value: `${focus.minutesThisMonth}${t("unit.minShort")}`,
+        accent: true,
+      },
+      { label: t("dash.moodEnergy"), value: mood.daysLogged ? `${mood.avgEnergy}/5` : "–" },
+    ];
+
+    const exportGoals = goals.slice(0, 2).map((goal) => ({
+      title: goal.title,
+      percent: goal.percent,
+      meta: `${formatGoalNumber(goal.current)} / ${formatGoalNumber(goal.target)} ${
+        goal.type === "savings" ? t("goal.currency") : t("goal.kg")
+      }`,
+    }));
+
+    return {
+      title: "Sprout Planner",
+      monthLabel: monthName(month, locale),
+      headline: zen ? t("dash.thisMonth") : headline,
+      weekdayLetters: weekdayLabels(locale, "narrow"),
+      stamps,
+      stats: exportStats,
+      goals: exportGoals,
+      legend: [
+        { label: t("cal.complete"), color: EXPORT_STATUS_COLOR.complete },
+        { label: t("cal.inProgress"), color: EXPORT_STATUS_COLOR["in-progress"] },
+        { label: t("cal.missed"), color: EXPORT_STATUS_COLOR.missed },
+        { label: t("status.rest"), color: EXPORT_STATUS_COLOR.rest },
+      ],
+      footer: `sprout-planner · ${today}`,
+    };
   }
 
   const streakPart =
@@ -111,6 +189,11 @@ export default function Dashboard({ state, setState }: Props) {
 
   return (
     <div className="w-full overflow-x-hidden">
+      <LoadingOverlay
+        open={!!processing}
+        progress={processing?.progress ?? 0}
+        message={processing?.message ?? ""}
+      />
       {/* ── Overview — first full-height page ────────────────────────── */}
       <section className="w-full px-4 py-5 lg:px-8 lg:py-8">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
@@ -223,6 +306,24 @@ export default function Dashboard({ state, setState }: Props) {
         </div>
       </section>
 
+      {/* ── Mood & focus wellbeing ───────────────────────────────────── */}
+      <section className="w-full px-4 py-5 lg:px-8 lg:py-8">
+        <div className="mx-auto w-full max-w-6xl">
+          <header className="mb-4 px-1">
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-subtle dark:text-surface-muted">
+              {t("dash.wellbeing")}
+            </p>
+            <h2 className="font-sans text-2xl font-bold text-ink dark:text-surface">
+              {t("dash.wellbeingTitle")}
+            </h2>
+          </header>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FocusCard state={state} t={t} />
+            <MoodCard state={state} t={t} />
+          </div>
+        </div>
+      </section>
+
       {/* ── Stamp calendar — second full-height page ─────────────────── */}
       <section className="flex min-h-[100svh] w-full flex-col justify-center px-4 py-12 lg:px-8">
         <div className="mx-auto w-full max-w-3xl">
@@ -309,6 +410,115 @@ function StatsRow({
           sub={t("dash.allTime")}
           accent="text-orange-500 dark:text-orange-400"
         />
+      )}
+    </div>
+  );
+}
+
+/** Mascot head per mood — mirrors the Mood view's sprite set. */
+const MOOD_HEAD: Record<MoodKey, string> = {
+  happy: "/sprout-head-happy.png",
+  calm: "/sprout-head-rest.png",
+  tired: "/sprout-head-rest.png",
+  sad: "/sprout-head-sad.png",
+  stressed: "/sprout-head-work.png",
+};
+
+function FocusCard({ state, t }: { state: AppState; t: TFn }) {
+  const focus = getFocusStats(state);
+  return (
+    <div className="flex flex-col rounded-3xl border border-sprout-100 bg-surface p-5 dark:border-sprout-900 dark:bg-surface-dark-muted">
+      <h3 className="flex items-center gap-2 text-base font-bold text-ink dark:text-surface">
+        <Timer size={18} className="text-sprout-600" aria-hidden="true" />
+        {t("nav.focus")}
+      </h3>
+      {focus.minutesAllTime === 0 ? (
+        <p className="mt-4 flex-1 text-sm text-ink-subtle dark:text-surface-muted">
+          {t("dash.focusNone")}
+        </p>
+      ) : (
+        <div className="mt-4 grid grid-cols-3 gap-x-4 gap-y-3">
+          <StatItem
+            label={t("dash.focusThisMonth")}
+            value={focus.minutesThisMonth}
+            suffix={t("unit.minShort")}
+            accent="text-sprout-600 dark:text-sprout-400"
+          />
+          <StatItem
+            label={t("dash.focusSessions")}
+            value={focus.sessionsThisMonth}
+            sub={t("dash.thisMonth")}
+          />
+          <StatItem
+            label={t("dash.focusAllTime")}
+            value={focus.minutesAllTime}
+            suffix={t("unit.minShort")}
+            accent="text-ink-muted dark:text-surface-muted"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MoodCard({ state, t }: { state: AppState; t: TFn }) {
+  const mood = getMoodSummary(state);
+  return (
+    <div className="flex flex-col rounded-3xl border border-sprout-100 bg-surface p-5 dark:border-sprout-900 dark:bg-surface-dark-muted">
+      <h3 className="flex items-center gap-2 text-base font-bold text-ink dark:text-surface">
+        <Smile size={18} className="text-sprout-600" aria-hidden="true" />
+        {t("nav.mood")}
+      </h3>
+      {mood.daysLogged === 0 ? (
+        <p className="mt-4 flex-1 text-sm text-ink-subtle dark:text-surface-muted">
+          {t("dash.moodNone")}
+        </p>
+      ) : (
+        <>
+          <div className="mt-4 grid grid-cols-3 gap-x-4 gap-y-3">
+            <StatItem
+              label={t("dash.moodEnergy")}
+              value={mood.avgEnergy}
+              suffix="/5"
+              decimals={1}
+              accent="text-sprout-600 dark:text-sprout-400"
+            />
+            <StatItem
+              label={t("dash.moodDays")}
+              value={mood.daysLogged}
+              sub={t("dash.thisMonth")}
+            />
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[10px] font-medium uppercase tracking-wide text-ink-subtle dark:text-surface-muted">
+                {t("dash.moodTop")}
+              </span>
+              {mood.topMood && (
+                <span className="flex items-center gap-1.5 text-sm font-bold text-ink dark:text-surface">
+                  <img
+                    src={MOOD_HEAD[mood.topMood]}
+                    alt=""
+                    aria-hidden="true"
+                    className="h-6 w-6 flex-none object-contain"
+                  />
+                  {t(`mood.${mood.topMood}`)}
+                </span>
+              )}
+            </div>
+          </div>
+          <div
+            className="mt-4 flex items-end gap-1.5"
+            aria-hidden="true"
+          >
+            {mood.trend.map((point) => (
+              <div
+                key={point.date}
+                title={`${point.date.slice(8)} · ${point.energy}/5`}
+                className="flex-1 rounded-t-md bg-sprout-400 dark:bg-sprout-600"
+                style={{ height: `${8 + (point.energy / 5) * 36}px` }}
+              />
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
@@ -650,21 +860,25 @@ function StatItem({
   suffix = "",
   sub,
   accent = "text-ink dark:text-surface",
+  decimals = 0,
 }: {
   label: string;
   value: number;
   suffix?: string;
   sub?: string;
   accent?: string;
+  /** Fractional values (e.g. avg energy) skip the integer count-up. */
+  decimals?: number;
 }) {
   const animated = useCountUp(value, 900);
+  const display = decimals > 0 ? value.toFixed(decimals) : animated;
   return (
     <div className="flex flex-col gap-0.5">
       <span className="text-[10px] text-ink-subtle dark:text-surface-muted uppercase tracking-wide font-medium">
         {label}
       </span>
       <span className={`text-2xl font-bold tabular-nums ${accent}`}>
-        {animated}
+        {display}
         {suffix}
       </span>
       {sub && (
@@ -675,6 +889,15 @@ function StatItem({
     </div>
   );
 }
+
+/** Status → flat cell color for the exported summary's stamp calendar. */
+const EXPORT_STATUS_COLOR: Record<DayStatus, string> = {
+  complete: "#22c55e",
+  "in-progress": "#fbbf24",
+  missed: "#f87171",
+  rest: "#7dd3fc",
+  neutral: "#e3efe7",
+};
 
 /** Mascot-head sticker per status — mirrors the calendar's stamp set. */
 const DASH_STATUS_HEAD: Record<Exclude<DayStatus, "neutral">, string> = {

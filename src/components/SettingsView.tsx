@@ -10,6 +10,7 @@ import {
   Upload,
   RotateCcw,
   DatabaseBackup,
+  Info,
 } from "lucide-react";
 import {
   AppState,
@@ -29,8 +30,11 @@ import {
   notifPermission,
   requestNotif,
 } from "../lib/useReminders";
+import { useProcessing } from "../lib/useProcessing";
 import { useT } from "../lib/i18n";
+import { APP_VERSION, versionLabel } from "../lib/version";
 import TaskManager from "./TaskManager";
+import LoadingOverlay from "./LoadingOverlay";
 
 type Props = {
   state: AppState;
@@ -62,15 +66,19 @@ export default function SettingsView({ state, setState }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [backupMsg, setBackupMsg] = useState<{ text: string; ok: boolean }>();
+  const { processing, run } = useProcessing();
 
-  function handleExport() {
-    const blob = new Blob([exportBackup(state)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = backupFilename();
-    a.click();
-    URL.revokeObjectURL(url);
+  async function handleExport() {
+    setBackupMsg(undefined);
+    await run(t("proc.exportConfig"), async () => {
+      const blob = new Blob([exportBackup(state)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = backupFilename();
+      a.click();
+      URL.revokeObjectURL(url);
+    });
     setBackupMsg({ text: t("settings.exportOk"), ok: true });
   }
 
@@ -78,19 +86,32 @@ export default function SettingsView({ state, setState }: Props) {
     const file = e.target.files?.[0];
     e.target.value = ""; // allow re-importing the same file
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const next = parseBackup(String(reader.result ?? ""));
-      if (next) {
-        setState(next);
-        setBackupMsg({ text: t("settings.importOk"), ok: true });
-      } else {
-        setBackupMsg({ text: t("settings.importErr"), ok: false });
-      }
-    };
-    reader.onerror = () =>
-      setBackupMsg({ text: t("settings.importErr"), ok: false });
-    reader.readAsText(file);
+    setBackupMsg(undefined);
+    run(
+      t("proc.importConfig"),
+      () =>
+        new Promise<void>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const next = parseBackup(String(reader.result ?? ""));
+            if (next) {
+              setState(next);
+              setBackupMsg({ text: t("settings.importOk"), ok: true });
+              resolve();
+            } else {
+              setBackupMsg({ text: t("settings.importErr"), ok: false });
+              reject(new Error("parse"));
+            }
+          };
+          reader.onerror = () => {
+            setBackupMsg({ text: t("settings.importErr"), ok: false });
+            reject(new Error("read"));
+          };
+          reader.readAsText(file);
+        }),
+    ).catch(() => {
+      /* message already surfaced via backupMsg */
+    });
   }
 
   function handleReset() {
@@ -121,6 +142,11 @@ export default function SettingsView({ state, setState }: Props) {
 
   return (
     <div className="mx-auto min-h-full w-full max-w-6xl px-4 py-5 lg:px-8 lg:py-8">
+      <LoadingOverlay
+        open={!!processing}
+        progress={processing?.progress ?? 0}
+        message={processing?.message ?? ""}
+      />
       <header className="mb-8">
         <h1 className="font-sans text-3xl font-bold text-ink dark:text-surface">
           {t("settings.title")}
@@ -439,6 +465,42 @@ export default function SettingsView({ state, setState }: Props) {
                 {t("unit.dayShort")}
               </p>
             </div>
+          </div>
+
+          {/* Version */}
+          <div className="rounded-2xl border border-sprout-100 bg-surface p-4 dark:border-sprout-900 dark:bg-surface-dark-muted">
+            <div className="mb-3 flex items-center gap-2">
+              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-sprout-100 text-sprout-700 dark:bg-sprout-950 dark:text-sprout-300">
+                <Info size={18} aria-hidden="true" />
+              </span>
+              <div>
+                <h2 className="text-sm font-bold text-ink dark:text-surface">
+                  {t("settings.about")}
+                </h2>
+                <p className="text-xs text-ink-subtle dark:text-surface-muted">
+                  {t("settings.releaseDate", {
+                    date: APP_VERSION.releasedAt,
+                  })}
+                </p>
+              </div>
+              <span className="ml-auto rounded-full border border-sprout-200 bg-sprout-50 px-3 py-1 text-xs font-bold text-sprout-700 dark:border-sprout-800 dark:bg-sprout-950/60 dark:text-sprout-300">
+                {versionLabel(APP_VERSION.version)}
+              </span>
+            </div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-subtle dark:text-surface-muted">
+              {t("settings.changelog")}
+            </p>
+            <ul className="mt-2 space-y-1.5 text-sm text-ink-muted dark:text-surface-muted">
+              {APP_VERSION.changelog.map((item) => (
+                <li key={item} className="flex gap-2">
+                  <span
+                    aria-hidden="true"
+                    className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-sprout-500"
+                  />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </div>

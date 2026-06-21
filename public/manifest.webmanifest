@@ -1,7 +1,11 @@
 {
+  "id": "/app/",
   "name": "Sprout Planner",
   "short_name": "Sprout",
   "description": "Grow a daily habit streak with Sprout, your friendly task companion.",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["productivity", "lifestyle"],
   "start_url": "/app/",
   "scope": "/",
   "display": "standalone",

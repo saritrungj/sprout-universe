@@ -3,6 +3,17 @@
 @tailwind utilities;
 
 @layer base {
+  /* Pin the rendering color scheme to the app's own theme so native UI
+     (form controls, scrollbars, date pickers) never follows the device's
+     light/dark preference. The app toggles `.dark` on <html> itself. */
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
   html {
     --font-en: "Roboto";
     --font-th: "Prompt";
@@ -148,6 +159,36 @@
   /* View transition: each tab panel rises and fades in on mount */
   .view-enter {
     animation: view-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Springy "boing" — a continuous squash-and-stretch bounce for the logo
+     during loading/splash. Honors prefers-reduced-motion via the global rule. */
+  .animate-logo-boing {
+    animation: logo-boing 1.5s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+    transform-origin: 50% 100%;
+    will-change: transform;
+  }
+
+  @keyframes logo-boing {
+    0%,
+    100% {
+      transform: translateY(0) scale(1, 1);
+    }
+    18% {
+      transform: translateY(-16px) scale(0.95, 1.07);
+    }
+    38% {
+      transform: translateY(0) scale(1.07, 0.93);
+    }
+    55% {
+      transform: translateY(-7px) scale(0.98, 1.03);
+    }
+    72% {
+      transform: translateY(0) scale(1.03, 0.98);
+    }
+    86% {
+      transform: translateY(-2px) scale(1, 1);
+    }
   }
 
   .motion-card {

@@ -22,7 +22,9 @@ import {
   requestGeminiMonthlyPlan,
   requestGeminiTasks,
 } from "../lib/ai";
+import { useProcessing } from "../lib/useProcessing";
 import { useT } from "../lib/i18n";
+import LoadingOverlay from "./LoadingOverlay";
 
 type Props = {
   state: AppState;
@@ -81,6 +83,7 @@ export default function HeroPlanner({ state, setState }: Props) {
   const [addedMonths, setAddedMonths] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const { processing, run } = useProcessing();
   const configured = !!getGeminiConfig().apiKey;
   const today = todayISO();
 
@@ -96,21 +99,25 @@ export default function HeroPlanner({ state, setState }: Props) {
         const existing = getDayTaskIds(state, today)
           .map((id) => state.tasks[id]?.title)
           .filter((title): title is string => !!title);
-        const result = await requestGeminiTasks({
-          goal,
-          language: lang,
-          date: today,
-          existingTasks: existing,
-        });
+        const result = await run(t("proc.aiPlan"), () =>
+          requestGeminiTasks({
+            goal,
+            language: lang,
+            date: today,
+            existingTasks: existing,
+          }),
+        );
         if (result.length === 0) setError(t("plan.empty"));
         setTasks(result);
       } else {
-        const result = await requestGeminiMonthlyPlan({
-          goal,
-          months,
-          language: lang,
-          date: today,
-        });
+        const result = await run(t("proc.aiPlan"), () =>
+          requestGeminiMonthlyPlan({
+            goal,
+            months,
+            language: lang,
+            date: today,
+          }),
+        );
         if (result.months.length === 0) {
           setError(t("plan.empty"));
           setPlan(null);
@@ -192,6 +199,12 @@ export default function HeroPlanner({ state, setState }: Props) {
   }
 
   return (
+    <>
+    <LoadingOverlay
+      open={!!processing}
+      progress={processing?.progress ?? 0}
+      message={processing?.message ?? ""}
+    />
     <div
       className={`animate-pop-in w-full rounded-3xl border border-sprout-100 bg-surface/95 p-4 text-left shadow-[0_24px_48px_rgba(22,101,52,0.16)] backdrop-blur-md dark:border-sprout-900 dark:bg-surface-dark-muted/95 ${
         mode === "month" ? "max-w-lg" : "max-w-md"
@@ -439,6 +452,7 @@ export default function HeroPlanner({ state, setState }: Props) {
         </div>
       )}
     </div>
+    </>
   );
 }
 

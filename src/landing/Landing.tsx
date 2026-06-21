@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Github, HeartHandshake, MessageCircle } from "lucide-react";
+import { Check, Flame, Github, HeartHandshake, MessageCircle } from "lucide-react";
 import { I18nProvider, useT } from "../lib/i18n";
 import { Lang } from "../lib/store";
 import LanguageSelect from "../components/LanguageSelect";
@@ -167,7 +167,7 @@ function Hero() {
         className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-sprout-100/70 via-sprout-50/40 to-transparent"
       />
 
-      <div className="relative mx-auto grid w-full max-w-6xl items-center gap-10 px-5 py-12 sm:px-8 sm:py-16 lg:grid-cols-[1.1fr_0.9fr] lg:gap-6">
+      <div className="relative mx-auto grid w-full max-w-6xl items-center gap-14 px-5 py-12 sm:px-8 sm:py-16 lg:grid-cols-[1.05fr_0.95fr] lg:gap-8">
         <div
           className="animate-rise mx-auto flex max-w-2xl flex-col items-center text-center lg:mx-0 lg:items-start lg:text-left"
           style={{ "--i": 0 } as React.CSSProperties}
@@ -197,36 +197,167 @@ function Hero() {
           </div>
         </div>
 
-        {/* Mascot — the emotional core, floating over its diffuse glow. */}
+        {/* A live-feeling preview of the planner: a Today checklist with a few
+            dashboard chips floating around it — the product as the hero image. */}
         <div
-          className="animate-rise flex justify-center lg:justify-end"
+          className="animate-rise"
           style={{ "--i": 1 } as React.CSSProperties}
         >
-          <div className="group relative">
-            <div
-              aria-hidden="true"
-              className={`absolute left-1/2 top-1/2 -z-10 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sprout-200/40 blur-3xl transition-all duration-700 ${EASE} group-hover:scale-125 group-hover:bg-sprout-300/40`}
-            />
-            {/* Scale lives on this wrapper; the img owns the float keyframe so
-                the two transforms never fight. */}
-            <div
-              className={`transition-transform duration-500 ${EASE} group-hover:-translate-y-1.5 group-hover:scale-[1.06]`}
-            >
-              <img
-                src="/sprout-success.png"
-                alt={t("landing.hero.eyebrow")}
-                className="h-56 w-56 select-none object-contain sm:h-72 sm:w-72"
-                style={{
-                  animation: "streak-float 5s ease-in-out infinite",
-                  filter: "drop-shadow(0 18px 30px rgba(22,101,52,0.18))",
-                }}
-                draggable={false}
-              />
-            </div>
-          </div>
+          <HeroPreview />
         </div>
       </div>
     </section>
+  );
+}
+
+/** Mock planner UI used as the hero illustration. Localized, decorative. */
+function HeroPreview() {
+  const { t } = useT();
+  return (
+    <div className="relative mx-auto w-full max-w-[20rem] sm:max-w-sm lg:mr-0">
+      <div
+        aria-hidden="true"
+        className="absolute left-1/2 top-1/2 -z-10 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sprout-200/40 blur-3xl"
+      />
+
+      {/* Centerpiece: Today checklist card */}
+      <div className="relative z-10 rounded-[1.75rem] border border-sprout-100 bg-surface/95 p-5 shadow-[0_30px_70px_-24px_rgba(22,101,52,0.32)] backdrop-blur-sm sm:p-6">
+        <div className="flex items-center gap-3">
+          <img
+            src="/sprout-progress.png"
+            alt=""
+            aria-hidden="true"
+            className="h-11 w-11 flex-none object-contain"
+          />
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-subtle">
+              {t("landing.preview.progress")}
+            </p>
+            <p className="font-display text-lg font-bold leading-tight text-ink">
+              {t("day.today")}
+            </p>
+          </div>
+          <span className="ml-auto rounded-full bg-sprout-50 px-2.5 py-1 text-xs font-bold tabular-nums text-sprout-700 ring-1 ring-inset ring-sprout-100">
+            2/3
+          </span>
+        </div>
+
+        <ul className="mt-4 flex flex-col gap-2">
+          <PreviewTask label={t("landing.preview.task1")} done />
+          <PreviewTask label={t("landing.preview.task2")} done />
+          <PreviewTask label={t("landing.preview.task3")} />
+        </ul>
+
+        <div
+          className="mt-4 h-2 overflow-hidden rounded-full bg-sprout-100"
+          role="presentation"
+        >
+          <div className="h-full w-2/3 rounded-full bg-sprout-500" />
+        </div>
+      </div>
+
+      {/* Floating: streak chip */}
+      <div
+        className="absolute -right-2 -top-5 z-20 sm:-right-6"
+        style={{ animation: "streak-float 5s ease-in-out 0.4s infinite" }}
+      >
+        <div className="flex items-center gap-2 rounded-2xl border border-sprout-100 bg-surface/95 px-3 py-2 shadow-[0_18px_40px_-14px_rgba(249,115,22,0.45)] backdrop-blur-sm">
+          <Flame size={22} className="text-orange-500" fill="currentColor" aria-hidden="true" />
+          <div className="leading-tight">
+            <p className="font-display text-lg font-bold tabular-nums text-ink">7</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-ink-subtle">
+              {t("landing.preview.streak")}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Floating: month completion ring */}
+      <div
+        className="absolute -left-3 bottom-12 z-20 sm:-left-8"
+        style={{ animation: "streak-float 5.6s ease-in-out 0.9s infinite" }}
+      >
+        <div className="flex items-center gap-3 rounded-2xl border border-sprout-100 bg-surface/95 px-3.5 py-2.5 shadow-[0_18px_40px_-14px_rgba(22,101,52,0.32)] backdrop-blur-sm">
+          <PreviewRing percent={82} />
+          <div className="leading-tight">
+            <p className="font-display text-base font-bold tabular-nums text-sprout-700">
+              82%
+            </p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-ink-subtle">
+              {t("dash.thisMonth")}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Floating: mood pill (hidden on the narrowest screens) */}
+      <div
+        className="absolute -bottom-4 right-3 z-20 hidden min-[380px]:block sm:right-6"
+        style={{ animation: "streak-float 6.2s ease-in-out 0.2s infinite" }}
+      >
+        <div className="flex items-center gap-2 rounded-full border border-sprout-100 bg-surface/95 px-3 py-1.5 shadow-[0_14px_30px_-12px_rgba(22,101,52,0.3)] backdrop-blur-sm">
+          <img
+            src="/sprout-head-rest.png"
+            alt=""
+            aria-hidden="true"
+            className="h-6 w-6 flex-none object-contain"
+          />
+          <span className="text-xs font-bold text-sprout-700">
+            {t("mood.calm")}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PreviewTask({ label, done = false }: { label: string; done?: boolean }) {
+  return (
+    <li
+      className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 ${
+        done
+          ? "border-sprout-200 bg-sprout-50"
+          : "border-sprout-100 bg-surface-muted"
+      }`}
+    >
+      <span
+        aria-hidden="true"
+        className={`flex h-5 w-5 flex-none items-center justify-center rounded-full border-2 ${
+          done ? "border-sprout-500 bg-sprout-500" : "border-sprout-200"
+        }`}
+      >
+        {done && <Check size={12} className="text-white" />}
+      </span>
+      <span
+        className={`text-sm font-medium ${
+          done ? "text-ink-subtle line-through" : "text-ink"
+        }`}
+      >
+        {label}
+      </span>
+    </li>
+  );
+}
+
+function PreviewRing({ percent }: { percent: number }) {
+  const r = 16;
+  const circumference = 2 * Math.PI * r;
+  const offset = circumference * (1 - percent / 100);
+  return (
+    <svg viewBox="0 0 40 40" className="h-10 w-10 -rotate-90" aria-hidden="true">
+      <circle cx="20" cy="20" r={r} fill="none" stroke="#dcfce7" strokeWidth="5" />
+      <circle
+        cx="20"
+        cy="20"
+        r={r}
+        fill="none"
+        stroke="#22c55e"
+        strokeWidth="5"
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+      />
+    </svg>
   );
 }
 

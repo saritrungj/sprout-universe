@@ -55,33 +55,33 @@ export default function Splash({ onDone, minDuration = 3000 }: Props) {
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(187,247,208,0.36),transparent_36%),linear-gradient(180deg,rgba(240,253,244,0.96),rgba(220,252,231,0.7))] dark:bg-[radial-gradient(circle_at_50%_42%,rgba(34,197,94,0.18),transparent_36%),linear-gradient(180deg,rgba(5,46,22,0.96),rgba(6,78,59,0.74))]"
       />
 
-      <div className="relative flex flex-col items-center">
+      <div className="relative h-56 w-56 sm:h-64 sm:w-64">
         <span
           aria-hidden="true"
-          className="logo-aura absolute -top-7 h-56 w-56 rounded-full bg-[conic-gradient(from_140deg,rgba(34,197,94,0),rgba(34,197,94,0.4),rgba(187,247,208,0.9),rgba(34,197,94,0.32),rgba(34,197,94,0))] opacity-70 blur-sm dark:opacity-45 sm:-top-9 sm:h-64 sm:w-64"
+          className="logo-aura absolute inset-0 m-auto h-56 w-56 rounded-full bg-[conic-gradient(from_140deg,rgba(34,197,94,0),rgba(34,197,94,0.4),rgba(187,247,208,0.9),rgba(34,197,94,0.32),rgba(34,197,94,0))] opacity-70 blur-sm dark:opacity-45 sm:h-64 sm:w-64"
         />
         <span
           aria-hidden="true"
-          className="logo-ring absolute top-0 h-40 w-40 rounded-full border border-sprout-300/45 shadow-[0_0_42px_rgba(34,197,94,0.26),inset_0_0_32px_rgba(187,247,208,0.28)] dark:border-sprout-500/35 dark:shadow-[0_0_46px_rgba(34,197,94,0.18),inset_0_0_34px_rgba(34,197,94,0.12)] sm:h-52 sm:w-52"
+          className="logo-ring absolute inset-0 m-auto h-44 w-44 rounded-full border border-sprout-300/45 shadow-[0_0_42px_rgba(34,197,94,0.26),inset_0_0_32px_rgba(187,247,208,0.28)] dark:border-sprout-500/35 dark:shadow-[0_0_46px_rgba(34,197,94,0.18),inset_0_0_34px_rgba(34,197,94,0.12)] sm:h-52 sm:w-52"
         />
         <span
           aria-hidden="true"
-          className="logo-sweep absolute top-4 h-32 w-32 rounded-full bg-[linear-gradient(115deg,transparent_30%,rgba(255,255,255,0.74)_48%,transparent_66%)] opacity-0 mix-blend-screen dark:opacity-0 sm:top-5 sm:h-40 sm:w-40"
+          className="logo-glow absolute inset-0 m-auto h-40 w-40 rounded-full bg-sprout-300/45 blur-3xl dark:bg-sprout-600/30 sm:h-48 sm:w-48"
         />
         <span
           aria-hidden="true"
-          className="logo-glow absolute top-1 h-40 w-40 rounded-full bg-sprout-300/45 blur-3xl dark:bg-sprout-600/30 sm:h-48 sm:w-48"
+          className="logo-sweep absolute inset-0 m-auto h-32 w-32 rounded-full bg-[linear-gradient(115deg,transparent_30%,rgba(255,255,255,0.74)_48%,transparent_66%)] opacity-0 mix-blend-screen dark:opacity-0 sm:h-40 sm:w-40"
         />
         <img
           src="/sprout-logo.png"
           alt=""
           aria-hidden="true"
-          className="relative h-36 w-36 object-contain drop-shadow-[0_22px_40px_rgba(22,101,52,0.22)] sm:h-44 sm:w-44"
+          className="absolute inset-0 m-auto h-36 w-36 object-contain drop-shadow-[0_22px_40px_rgba(22,101,52,0.22)] sm:h-44 sm:w-44"
           style={{
             opacity: 0,
-            transformOrigin: "50% 50%",
+            transformOrigin: "50% 100%",
             animation:
-              "logo-arrive 0.72s cubic-bezier(0.16, 1, 0.3, 1) 0.12s forwards",
+              "logo-arrive 0.72s cubic-bezier(0.16, 1, 0.3, 1) 0.12s forwards, logo-boing 1.5s cubic-bezier(0.22, 1, 0.36, 1) 0.95s infinite",
           }}
         />
       </div>

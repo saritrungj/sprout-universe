@@ -1,3 +1,5 @@
+import { todayISO } from "./dates";
+
 /** Optional time-of-day grouping for a task. */
 export type Slot = "morning" | "afternoon" | "evening";
 
@@ -61,13 +63,6 @@ export type MoodLog = {
   gratitude?: string;
   vent?: string;
 };
-export type CoachMessage = {
-  id: string;
-  role: "user" | "assistant";
-  text: string;
-  createdAt: string;
-};
-
 export type MonthPlan = {
   month: string; // "2026-06"
   mainTaskIds: string[];
@@ -105,7 +100,6 @@ export type AppState = {
   templates?: string[];
   focusSessions: FocusSession[];
   moodLogs: Record<string, MoodLog>;
-  coachMessages: CoachMessage[];
   settings: Settings;
 };
 
@@ -116,7 +110,6 @@ export const defaultState: AppState = {
   templates: [],
   focusSessions: [],
   moodLogs: {},
-  coachMessages: [],
   settings: {
     theme: "light",
     language: "th",
@@ -128,7 +121,7 @@ export const defaultState: AppState = {
 };
 
 export function isFutureDate(date: string): boolean {
-  return date > new Date().toISOString().slice(0, 10);
+  return date > todayISO();
 }
 
 export function getMonthPlan(state: AppState, month: string): MonthPlan {
@@ -157,8 +150,12 @@ export function taskRecursOnDate(task: Task | undefined, date: string): boolean 
   return task.recurrence.weekdays.includes(day);
 }
 
-export function getDayTaskIds(state: AppState, date: string): string[] {
-  if (isFutureDate(date)) return [];
+/**
+ * Tasks planned for a date — month main tasks + recurring + per-day adds —
+ * resolved regardless of whether the date is in the future. Use this to
+ * *preview* what a day holds (e.g. the calendar's read-only future view).
+ */
+export function getPlannedTaskIds(state: AppState, date: string): string[] {
   const month = date.slice(0, 7);
   const plan = getMonthPlan(state, month);
   const log = getDayLog(state, date);
@@ -173,6 +170,12 @@ export function getDayTaskIds(state: AppState, date: string): string[] {
       ? dayIds
       : templateIds.filter((id) => !state.tasks[id]?.recurrence);
   return [...new Set([...baseIds, ...recurringIds, ...log.addonTaskIds])];
+}
+
+/** Active tasks for a date. Future days resolve to nothing (locked). */
+export function getDayTaskIds(state: AppState, date: string): string[] {
+  if (isFutureDate(date)) return [];
+  return getPlannedTaskIds(state, date);
 }
 
 export function nanoid(): string {
@@ -647,19 +650,6 @@ export function setMoodLog(
       ...(state.moodLogs ?? {}),
       [date]: { ...log, date },
     },
-  };
-}
-
-export function addCoachMessage(
-  state: AppState,
-  message: Omit<CoachMessage, "id" | "createdAt">,
-): AppState {
-  return {
-    ...state,
-    coachMessages: [
-      ...(state.coachMessages ?? []),
-      { ...message, id: nanoid(), createdAt: new Date().toISOString() },
-    ].slice(-40),
   };
 }
 

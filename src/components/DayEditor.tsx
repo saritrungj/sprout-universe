@@ -3,6 +3,7 @@ import { X, Plus, Check, Moon } from "lucide-react";
 import {
   AppState,
   getDayTaskIds,
+  getPlannedTaskIds,
   getDayLog,
   setTaskDone,
   addDayTask,
@@ -25,6 +26,7 @@ type Props = {
 export default function DayEditor({ date, state, setState, onClose }: Props) {
   const { t, locale } = useT();
   const taskIds = getDayTaskIds(state, date);
+  const plannedIds = getPlannedTaskIds(state, date);
   const log = getDayLog(state, date);
   const status = getDayStatus(state, date);
   const today = todayISO();
@@ -124,7 +126,7 @@ export default function DayEditor({ date, state, setState, onClose }: Props) {
         aria-hidden="true"
       />
       <div
-        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 pointer-events-none"
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
       >
       <div
         ref={dialogRef}
@@ -181,9 +183,40 @@ export default function DayEditor({ date, state, setState, onClose }: Props) {
         {/* Tasks */}
         <div className="flex flex-col gap-2">
           {isFuture && (
-            <p className="rounded-2xl border border-sprout-100 bg-surface-muted px-4 py-5 text-center text-sm font-medium text-ink-subtle dark:border-sprout-900 dark:bg-surface-dark dark:text-surface-muted">
-              {t("day.futureLocked")}
-            </p>
+            <>
+              <p className="rounded-2xl border border-sprout-100 bg-surface-muted px-4 py-3 text-center text-sm font-medium text-ink-subtle dark:border-sprout-900 dark:bg-surface-dark dark:text-surface-muted">
+                {t("day.futureLocked")}
+              </p>
+              {plannedIds.length === 0 ? (
+                <p className="py-4 text-center text-sm text-ink-subtle dark:text-surface-muted">
+                  {t("day.empty")}
+                </p>
+              ) : (
+                <>
+                  <p className="px-1 text-xs font-medium uppercase tracking-wide text-ink-subtle dark:text-surface-muted">
+                    {t("day.plannedTasks")}
+                  </p>
+                  {plannedIds.map((id) => {
+                    const task = state.tasks[id];
+                    if (!task) return null;
+                    return (
+                      <div
+                        key={id}
+                        className="flex items-center gap-3 rounded-xl border border-sprout-100 bg-surface-muted p-3 dark:border-sprout-900 dark:bg-surface-dark"
+                      >
+                        <div
+                          className="h-5 w-5 flex-shrink-0 rounded-full border-2 border-gray-300 dark:border-gray-600"
+                          aria-hidden="true"
+                        />
+                        <span className="text-sm text-ink-muted dark:text-surface-muted">
+                          {task.title}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+            </>
           )}
           {!isFuture && (
             <button

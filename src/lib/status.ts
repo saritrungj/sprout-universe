@@ -1,6 +1,7 @@
 import {
   AppState,
   GoalType,
+  MoodKey,
   Task,
   getDayLog,
   getDayTaskIds,
@@ -192,6 +193,73 @@ export function getMonthStats(state: AppState, month: string): MonthStats {
     totalDays: counted,
     tasksCompleted,
     restDays,
+  };
+}
+
+/* ── Focus & mood summaries — power the dashboard wellbeing cards ───────── */
+
+export type FocusStats = {
+  minutesToday: number;
+  minutesThisMonth: number;
+  sessionsThisMonth: number;
+  minutesAllTime: number;
+};
+
+export function getFocusStats(state: AppState): FocusStats {
+  const today = todayISO();
+  const month = today.slice(0, 7);
+  let minutesToday = 0;
+  let minutesThisMonth = 0;
+  let sessionsThisMonth = 0;
+  let minutesAllTime = 0;
+  for (const session of state.focusSessions) {
+    if (session.mode !== "focus") continue;
+    minutesAllTime += session.minutes;
+    if (session.startedAt.startsWith(month)) {
+      minutesThisMonth += session.minutes;
+      sessionsThisMonth++;
+    }
+    if (session.startedAt.startsWith(today)) minutesToday += session.minutes;
+  }
+  return { minutesToday, minutesThisMonth, sessionsThisMonth, minutesAllTime };
+}
+
+export type MoodSummary = {
+  daysLogged: number;
+  avgEnergy: number;
+  topMood?: MoodKey;
+  /** Up to the last 7 logged check-ins, oldest first. */
+  trend: { date: string; energy: number; mood: MoodKey }[];
+};
+
+export function getMoodSummary(state: AppState): MoodSummary {
+  const month = todayISO().slice(0, 7);
+  const entries = Object.values(state.moodLogs)
+    .filter((log) => log.date.startsWith(month))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  if (entries.length === 0) {
+    return { daysLogged: 0, avgEnergy: 0, trend: [] };
+  }
+  const energySum = entries.reduce((sum, log) => sum + log.energy, 0);
+  const counts = new Map<MoodKey, number>();
+  for (const log of entries) {
+    counts.set(log.mood, (counts.get(log.mood) ?? 0) + 1);
+  }
+  let topMood: MoodKey | undefined;
+  let topCount = 0;
+  for (const [mood, count] of counts) {
+    if (count > topCount) {
+      topCount = count;
+      topMood = mood;
+    }
+  }
+  return {
+    daysLogged: entries.length,
+    avgEnergy: Math.round((energySum / entries.length) * 10) / 10,
+    topMood,
+    trend: entries
+      .slice(-7)
+      .map((log) => ({ date: log.date, energy: log.energy, mood: log.mood })),
   };
 }
 
