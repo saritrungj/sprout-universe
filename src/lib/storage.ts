@@ -7,6 +7,7 @@ import {
   getMonthPlan,
 } from "./store";
 import { currentMonth, todayISO } from "./dates";
+import { cleanGoalTaskTitle } from "./goals";
 
 const KEY = "sprout-planner:v1";
 
@@ -58,6 +59,19 @@ export function migrateState(raw: AppState): AppState {
     tasks[id] = {
       ...tasks[id],
       isTemplate: true,
+      ...(tasks[id].goalType === "savings"
+        ? { goalType: "financial" as const }
+        : {}),
+    };
+  }
+  for (const [id, task] of Object.entries(tasks)) {
+    if (!task.goalType) continue;
+    const clean = cleanGoalTaskTitle(task.title);
+    tasks[id] = {
+      ...task,
+      ...(task.goalType === "savings" ? { goalType: "financial" as const } : {}),
+      title: clean,
+      goalTitle: task.goalTitle ?? clean,
     };
   }
 
@@ -71,6 +85,7 @@ export function migrateState(raw: AppState): AppState {
         ...new Set([...monthPlan.mainTaskIds, ...(log.addonTaskIds ?? [])]),
       ],
       goalEntries: log.goalEntries ?? {},
+      goalRecords: log.goalRecords ?? {},
       subtasksDone: log.subtasksDone ?? {},
       doneAt: log.doneAt ?? {},
       note: log.note ?? "",

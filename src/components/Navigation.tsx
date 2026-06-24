@@ -5,6 +5,7 @@ import {
   Settings,
   Smile,
   Timer,
+  Target,
   LucideIcon,
 } from "lucide-react";
 import { AppState, Lang } from "../lib/store";
@@ -17,6 +18,7 @@ export type Tab =
   | "calendar"
   | "focus"
   | "mood"
+  | "goals"
   | "dashboard"
   | "settings";
 
@@ -25,6 +27,7 @@ const NAV: { id: Tab; labelKey: string; Icon: LucideIcon }[] = [
   { id: "calendar", labelKey: "nav.calendar", Icon: CalendarDays },
   { id: "focus", labelKey: "nav.focus", Icon: Timer },
   { id: "mood", labelKey: "nav.mood", Icon: Smile },
+  { id: "goals", labelKey: "nav.goals", Icon: Target },
   { id: "dashboard", labelKey: "nav.dashboard", Icon: LayoutDashboard },
   { id: "settings", labelKey: "nav.settings", Icon: Settings },
 ];
@@ -160,7 +163,7 @@ export function BottomNav({ active, onChange }: NavProps) {
   return (
     <nav
       aria-label={t("nav.main")}
-      className="fixed inset-x-2 bottom-2 z-50 grid grid-cols-6 rounded-[1.5rem] border border-sprout-100 bg-surface/95 p-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] shadow-[0_16px_40px_rgba(22,101,52,0.14)] backdrop-blur-md dark:border-sprout-900 dark:bg-surface-dark/95 lg:hidden"
+      className="fixed inset-x-2 bottom-2 z-50 grid grid-cols-7 rounded-[1.5rem] border border-sprout-100 bg-surface/95 p-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] shadow-[0_16px_40px_rgba(22,101,52,0.14)] backdrop-blur-md dark:border-sprout-900 dark:bg-surface-dark/95 lg:hidden"
     >
       {NAV.map(({ id, labelKey, Icon }) => {
         const selected = active === id;

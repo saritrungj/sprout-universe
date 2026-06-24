@@ -9,6 +9,7 @@ import Dashboard from "./components/Dashboard";
 import SettingsView from "./components/SettingsView";
 import MoodView from "./components/MoodView";
 import FocusView from "./components/FocusView";
+import GoalsView from "./components/goals/GoalsView";
 import RemindersRunner from "./components/RemindersRunner";
 import Splash from "./components/Splash";
 
@@ -36,6 +37,11 @@ export default function App() {
     setState(setLanguage(state, lang));
   }
 
+  function navigateTab(next: Tab) {
+    setTab(next);
+    window.location.hash = next;
+  }
+
   return (
     <I18nProvider lang={state.settings.language}>
       {booting && <Splash onDone={() => setBooting(false)} />}
@@ -46,7 +52,7 @@ export default function App() {
       <div className="flex h-dvh w-full overflow-hidden bg-surface dark:bg-surface-dark">
         <SideNav
           active={tab}
-          onChange={setTab}
+          onChange={navigateTab}
           state={state}
           onToggleTheme={toggleTheme}
           onChangeLanguage={changeLanguage}
@@ -75,8 +81,14 @@ export default function App() {
                 <FocusView state={state} setState={setState} />
               )}
               {tab === "mood" && <MoodView state={state} setState={setState} />}
+              {tab === "goals" && (
+                <GoalsView state={state} setState={setState} />
+              )}
               {tab === "dashboard" && (
-                <Dashboard state={state} setState={setState} />
+                <Dashboard
+                  state={state}
+                  onOpenGoals={() => navigateTab("goals")}
+                />
               )}
               {tab === "settings" && (
                 <SettingsView state={state} setState={setState} />
@@ -85,7 +97,7 @@ export default function App() {
           </main>
         </div>
 
-        <BottomNav active={tab} onChange={setTab} />
+        <BottomNav active={tab} onChange={navigateTab} />
       </div>
     </I18nProvider>
   );
@@ -93,7 +105,7 @@ export default function App() {
 
 function tabFromHash(): Tab | null {
   const hash = window.location.hash.replace("#", "");
-  return ["today", "calendar", "focus", "mood", "dashboard", "settings"].includes(
+  return ["today", "calendar", "focus", "mood", "goals", "dashboard", "settings"].includes(
     hash,
   )
     ? (hash as Tab)

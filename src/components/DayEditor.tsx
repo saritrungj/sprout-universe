@@ -10,11 +10,13 @@ import {
   removeDayTask,
   setDayNote,
   setDaySkipped,
-  setGoalEntry,
+  normalizeGoalType,
 } from "../lib/store";
 import { formatDayLabel, todayISO } from "../lib/dates";
 import { getDayStatus, statusStyles } from "../lib/status";
 import { useT } from "../lib/i18n";
+import GoalGoalLog from "./goals/GoalGoalLog";
+import TaskTitle from "./TaskTitle";
 
 type Props = {
   date: string;
@@ -208,9 +210,10 @@ export default function DayEditor({ date, state, setState, onClose }: Props) {
                           className="h-5 w-5 flex-shrink-0 rounded-full border-2 border-gray-300 dark:border-gray-600"
                           aria-hidden="true"
                         />
-                        <span className="text-sm text-ink-muted dark:text-surface-muted">
-                          {task.title}
-                        </span>
+                        <TaskTitle
+                          task={task}
+                          className="text-sm text-ink-muted dark:text-surface-muted"
+                        />
                       </div>
                     );
                   })}
@@ -293,7 +296,7 @@ export default function DayEditor({ date, state, setState, onClose }: Props) {
                       : "text-ink dark:text-surface"
                   }`}
                 >
-                  {task.title}
+                  <TaskTitle task={task} />
                 </span>
               </button>
               <button
@@ -304,24 +307,14 @@ export default function DayEditor({ date, state, setState, onClose }: Props) {
                 <X size={15} aria-hidden="true" />
               </button>
               </div>
-              {task.goalType && (
-                <label className="flex items-center gap-2 px-1 pb-1 text-xs text-ink-subtle dark:text-surface-muted">
-                  {task.goalType === "savings"
-                    ? t("goal.savedToday")
-                    : t("goal.weightToday")}
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    value={log.goalEntries?.[id] ?? ""}
-                    onChange={(e) =>
-                      setState(setGoalEntry(state, date, id, Number(e.target.value)))
-                    }
-                    className="min-h-[40px] w-28 rounded-xl border border-sprout-100 bg-surface-muted px-3 py-2 text-sm text-ink dark:border-sprout-900 dark:bg-surface-dark dark:text-surface"
-                  />
-                  <span>
-                    {task.goalType === "savings" ? t("goal.currency") : t("goal.kg")}
-                  </span>
-                </label>
+              {task.goalType && normalizeGoalType(task.goalType) && (
+                <GoalGoalLog
+                  state={state}
+                  setState={setState}
+                  taskId={id}
+                  goalType={normalizeGoalType(task.goalType)!}
+                  date={date}
+                />
               )}
               </div>
             );

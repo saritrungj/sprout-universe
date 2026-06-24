@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { PartyPopper } from "lucide-react";
 import { StreakInfo } from "../lib/status";
 import { useCountUp } from "../lib/useCountUp";
 import { useT } from "../lib/i18n";
@@ -89,8 +90,8 @@ export default function StreakCard({ streak, todayPending }: Props) {
 
       {/* Milestone banner */}
       {reached && (
-        <div className="rounded-xl bg-sprout-50 dark:bg-sprout-950 px-3 py-2 text-sm text-sprout-700 dark:text-sprout-300 font-medium animate-bloom">
-          <span aria-hidden="true">🎉</span>{" "}
+        <div className="rounded-xl bg-sprout-50 px-3 py-2 text-sm font-medium text-sprout-700 animate-bloom dark:bg-sprout-950 dark:text-sprout-300">
+          <PartyPopper size={16} className="mr-1 inline-block align-text-bottom" aria-hidden="true" />
           {t("streak.milestone", { n: reached })}
         </div>
       )}

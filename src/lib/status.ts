@@ -6,7 +6,14 @@ import {
   getDayLog,
   getDayTaskIds,
   isFutureDate,
+  normalizeGoalType,
 } from "./store";
+import {
+  getCurrentBalance,
+  getFinancialRows,
+  getWeightRows,
+  cleanGoalTaskTitle,
+} from "./goals";
 import { todayISO, buildHeatmapDates, buildMonthGrid } from "./dates";
 
 export type DayStatus =
@@ -306,7 +313,7 @@ export function getConsistencyData(
 export type GoalProgress = {
   taskId: string;
   title: string;
-  type: GoalType;
+  type: "financial" | "weight";
   current: number;
   target: number;
   percent: number;
@@ -336,41 +343,45 @@ export function getRecommendedReminderTime(state: AppState): string {
   ).padStart(2, "0")}`;
 }
 
+function goalDisplayTitle(task: Task): string {
+  return task.goalTitle ?? cleanGoalTaskTitle(task.title);
+}
+
 export function getGoalProgress(state: AppState): GoalProgress[] {
   return Object.values(state.tasks)
     .filter(
       (task): task is Task & {
         goalType: GoalType;
         goalConfig: { target: number; checkEveryDays?: number };
-      } =>
-        !!task.goalType && !!task.goalConfig,
+      } => !!task.goalType && !!task.goalConfig,
     )
     .map((task) => {
-      const entries = Object.values(state.days)
-        .filter((log) => !isFutureDate(log.date))
-        .flatMap((log) => {
-          const value = log.goalEntries?.[task.id];
-          return typeof value === "number" ? [{ date: log.date, value }] : [];
-        })
-        .sort((a, b) => a.date.localeCompare(b.date));
+      const kind = normalizeGoalType(task.goalType)!;
       const target = task.goalConfig?.target ?? 0;
-      if (task.goalType === "savings") {
-        const current = entries.reduce((sum, entry) => sum + entry.value, 0);
+      const title = goalDisplayTitle(task);
+
+      if (kind === "financial") {
+        const finRows = getFinancialRows(state, task.id);
+        const netEntries = finRows.map((row) => ({
+          date: row.date,
+          value: row.net,
+        }));
+        const current = getCurrentBalance(state, task.id);
         const remaining = Math.max(0, target - current);
-        const pacePerDay = savingsPacePerDay(entries);
+        const pacePerDay = savingsPacePerDay(netEntries);
         const forecastDate =
           remaining <= 0
-            ? entries[entries.length - 1]?.date
+            ? finRows[finRows.length - 1]?.date
             : pacePerDay
               ? addDaysISO(
-                  entries[entries.length - 1]?.date ?? todayISO(),
+                  finRows[finRows.length - 1]?.date ?? todayISO(),
                   Math.ceil(remaining / pacePerDay),
                 )
               : undefined;
         return {
           taskId: task.id,
-          title: task.title,
-          type: task.goalType,
+          title,
+          type: "financial" as const,
           current,
           target,
           remaining,
@@ -380,13 +391,17 @@ export function getGoalProgress(state: AppState): GoalProgress[] {
               : 0,
           pacePerDay,
           forecastDate,
-          trend: cumulativeTrend(entries),
-          latestDate: entries[entries.length - 1]?.date,
-          needsMoreData: entries.length < 2 && remaining > 0,
+          trend: finRows.map((row) => ({ date: row.date, value: row.balance })),
+          latestDate: finRows[finRows.length - 1]?.date,
+          needsMoreData: finRows.length < 2 && remaining > 0,
           reached: target > 0 && current >= target,
         };
       }
 
+      const entries = getWeightRows(state, task.id).map((row) => ({
+        date: row.date,
+        value: row.value,
+      }));
       const latest = entries[entries.length - 1];
       const start =
         "start" in task.goalConfig && typeof task.goalConfig.start === "number"
@@ -424,12 +439,15 @@ export function getGoalProgress(state: AppState): GoalProgress[] {
           : undefined;
       return {
         taskId: task.id,
-        title: task.title,
-        type: task.goalType,
+        title,
+        type: "weight" as const,
         current,
         target,
         remaining,
-        percent: totalChange > 0 ? Math.max(0, Math.min(100, Math.round((moved / totalChange) * 100))) : 0,
+        percent:
+          totalChange > 0
+            ? Math.max(0, Math.min(100, Math.round((moved / totalChange) * 100)))
+            : 0,
         pacePerDay,
         forecastDate,
         trend: entries,
@@ -442,16 +460,6 @@ export function getGoalProgress(state: AppState): GoalProgress[] {
             : undefined,
       };
     });
-}
-
-function cumulativeTrend(
-  entries: { date: string; value: number }[],
-): { date: string; value: number }[] {
-  let total = 0;
-  return entries.map((entry) => {
-    total += entry.value;
-    return { date: entry.date, value: total };
-  });
 }
 
 function savingsPacePerDay(entries: { date: string; value: number }[]): number | undefined {

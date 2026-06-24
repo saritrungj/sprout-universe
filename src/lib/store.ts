@@ -1,4 +1,4 @@
-import { todayISO } from "./dates";
+import { todayISO, currentMonth } from "./dates";
 
 /** Optional time-of-day grouping for a task. */
 export type Slot = "morning" | "afternoon" | "evening";
@@ -11,25 +11,49 @@ export type Task = {
   isTemplate?: boolean;
   goalType?: GoalType;
   goalConfig?: GoalConfig;
+  /** User-facing goal title (task title is auto-generated). */
+  goalTitle?: string;
   subtasks?: Subtask[];
   recurrence?: Recurrence;
 };
 
-export type GoalType = "savings" | "weight";
+/** @deprecated use "financial" — migrated automatically from "savings" */
+export type GoalType = "financial" | "weight" | "savings";
 export type Subtask = { id: string; title: string };
 export type Recurrence =
   | { type: "daily" }
   | { type: "weekly"; weekdays: number[] };
 export type WeightDirection = "loss" | "gain";
 
-export type GoalConfig =
-  | { target: number }
-  | {
-      target: number;
-      checkEveryDays?: number;
-      start?: number;
-      direction?: WeightDirection;
-    };
+export type FinancialGoalConfig = {
+  target: number;
+  startingBalance?: number;
+};
+
+export type WeightGoalConfig = {
+  target: number;
+  checkEveryDays?: number;
+  start?: number;
+  direction?: WeightDirection;
+};
+
+export type GoalConfig = FinancialGoalConfig | WeightGoalConfig;
+
+/** Per-day goal log — financial (income/expense) or weight entry. */
+export type FinancialRecord = {
+  type: "financial";
+  income: number;
+  expense: number;
+  note?: string;
+};
+
+export type WeightRecord = {
+  type: "weight";
+  value: number;
+  note?: string;
+};
+
+export type GoalRecord = FinancialRecord | WeightRecord;
 
 /** Mascot avatar poses the user can pick (maps to /sprout-<key>.png). */
 export type MascotKey =
@@ -76,6 +100,7 @@ export type DayLog = {
   skipped?: boolean;
   note?: string;
   goalEntries?: Record<string, number>;
+  goalRecords?: Record<string, GoalRecord>;
   subtasksDone?: Record<string, Record<string, boolean>>;
   doneAt?: Record<string, string>;
 };
@@ -138,6 +163,7 @@ export function getDayLog(state: AppState, date: string): DayLog {
     skipped: log?.skipped ?? false,
     note: log?.note ?? "",
     goalEntries: log?.goalEntries ?? {},
+    goalRecords: log?.goalRecords ?? {},
     subtasksDone: log?.subtasksDone ?? {},
     doneAt: log?.doneAt ?? {},
   };
@@ -658,4 +684,143 @@ export function setAISettings(
   ai: AISettings,
 ): AppState {
   return { ...state, settings: { ...state.settings, ai } };
+}
+
+/** Normalize legacy "savings" to "financial". */
+export function normalizeGoalType(type: GoalType | undefined): "financial" | "weight" | undefined {
+  if (!type) return undefined;
+  return type === "savings" ? "financial" : type;
+}
+
+/** Auto-generated task name when a goal is created (icons render in UI, not in stored text). */
+export function generateGoalTaskName(goalTitle: string, _type: GoalType): string {
+  return goalTitle.trim();
+}
+
+/**
+ * Create a goal and its linked task (added to the current month's task set).
+ * Returns [newState, taskId].
+ */
+export function createGoal(
+  state: AppState,
+  goalTitle: string,
+  type: GoalType,
+  config: GoalConfig,
+): [AppState, string] {
+  const cleanTitle = goalTitle.trim();
+  if (!cleanTitle) return [state, ""];
+  const normalized = normalizeGoalType(type) ?? "financial";
+  const taskTitle = generateGoalTaskName(cleanTitle, normalized);
+  const month = currentMonth();
+  const [withTask, id] = addMonthTask(state, month, taskTitle);
+  if (!id) return [state, ""];
+  return [
+    {
+      ...withTask,
+      tasks: {
+        ...withTask.tasks,
+        [id]: {
+          ...withTask.tasks[id],
+          goalType: normalized,
+          goalConfig: config,
+          goalTitle: cleanTitle,
+        },
+      },
+    },
+    id,
+  ];
+}
+
+/** All tasks that were auto-created from goals. */
+export function getGoalTasks(state: AppState): Task[] {
+  return Object.values(state.tasks).filter(
+    (task) => !!task.goalType && !!task.goalConfig,
+  );
+}
+
+export function setFinancialRecord(
+  state: AppState,
+  date: string,
+  taskId: string,
+  income: number,
+  expense: number,
+  note?: string,
+): AppState {
+  if (isFutureDate(date)) return state;
+  if (!Number.isFinite(income) || !Number.isFinite(expense)) return state;
+  const stateWithPlan = getOrCreateDayPlan(state, date);
+  const log = getDayLog(stateWithPlan, date);
+  const record: FinancialRecord = {
+    type: "financial",
+    income,
+    expense,
+    ...(note?.trim() ? { note: note.trim() } : {}),
+  };
+  return {
+    ...stateWithPlan,
+    days: {
+      ...stateWithPlan.days,
+      [date]: {
+        ...log,
+        goalRecords: { ...(log.goalRecords ?? {}), [taskId]: record },
+        goalEntries: {
+          ...(log.goalEntries ?? {}),
+          [taskId]: income - expense,
+        },
+      },
+    },
+  };
+}
+
+export function setWeightRecord(
+  state: AppState,
+  date: string,
+  taskId: string,
+  value: number,
+  note?: string,
+): AppState {
+  if (isFutureDate(date) || !Number.isFinite(value)) return state;
+  const stateWithPlan = getOrCreateDayPlan(state, date);
+  const log = getDayLog(stateWithPlan, date);
+  const record: WeightRecord = {
+    type: "weight",
+    value,
+    ...(note?.trim() ? { note: note.trim() } : {}),
+  };
+  return {
+    ...stateWithPlan,
+    days: {
+      ...stateWithPlan.days,
+      [date]: {
+        ...log,
+        goalRecords: { ...(log.goalRecords ?? {}), [taskId]: record },
+        goalEntries: { ...(log.goalEntries ?? {}), [taskId]: value },
+      },
+    },
+  };
+}
+
+export function removeGoalRecord(
+  state: AppState,
+  date: string,
+  taskId: string,
+): AppState {
+  if (isFutureDate(date)) return state;
+  const log = getDayLog(state, date);
+  const goalRecords = { ...(log.goalRecords ?? {}) };
+  const goalEntries = { ...(log.goalEntries ?? {}) };
+  delete goalRecords[taskId];
+  delete goalEntries[taskId];
+  return {
+    ...state,
+    days: {
+      ...state.days,
+      [date]: { ...log, goalRecords, goalEntries },
+    },
+  };
+}
+
+/** Remove a goal and its linked task entirely. */
+export function removeGoal(state: AppState, taskId: string): AppState {
+  return removeTask(state, taskId);
 }

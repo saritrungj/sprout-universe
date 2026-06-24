@@ -7,6 +7,7 @@ import {
   removeMainTask,
 } from "../lib/store";
 import { useT } from "../lib/i18n";
+import TaskTitle from "./TaskTitle";
 import { currentMonth, formatMonthLabel } from "../lib/dates";
 
 type Props = {
@@ -88,9 +89,7 @@ export default function TaskManager({
             key={id}
             className="flex items-center gap-2 rounded-2xl border border-sprout-100 bg-surface-muted px-3 py-2 dark:border-sprout-950 dark:bg-surface-dark"
           >
-            <span className="flex-1 text-sm text-ink dark:text-surface">
-              {task.title}
-            </span>
+            <TaskTitle task={task} className="flex-1 text-sm" />
             <button
               data-flat
               onClick={() => handleRemove(id)}

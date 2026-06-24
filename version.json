@@ -1,9 +1,8 @@
 {
-  "version": "0.2.0",
-  "releasedAt": "2026-06-21",
+  "version": "0.3.4",
+  "releasedAt": "2026-06-24",
   "changelog": [
-    "Added app version details to Settings.",
-    "Added version.json as the single release metadata source.",
-    "Added changelog notes for release tracking."
+    "All-done badge now sits below the mascot as a two-line card instead of overlapping the sprite.",
+    "Complete hero adds floating seed sprites, pulse rings, badge rise animation, and a warm radial glow."
   ]
 }

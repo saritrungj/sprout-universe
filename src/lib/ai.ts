@@ -30,7 +30,7 @@ export type ParsedAITask = {
   title: string;
   slot?: Slot;
   asTemplate?: boolean;
-  goalType?: "savings" | "weight";
+  goalType?: "financial" | "weight" | "savings";
   goalTarget?: number;
   checkEveryDays?: number;
 };
@@ -64,7 +64,7 @@ export function buildAIRequest(input: AIRequestInput): {
       existingTasks: input.existingTasks,
       instructions:
         input.mode === "tasks"
-          ? "Return concise JSON with tasks. Each task may include title, slot morning/afternoon/evening, asTemplate, goalType savings/weight, goalTarget, checkEveryDays."
+          ? "Return concise JSON with tasks. Each task may include title, slot morning/afternoon/evening, asTemplate, goalType financial/weight, goalTarget, checkEveryDays."
           : "Answer as a concise productivity assistant for Sprout Planner.",
     },
   };
@@ -362,10 +362,18 @@ export function parseAITasks(data: unknown): ParsedAITask[] {
       item.slot === "evening"
         ? item.slot
         : undefined;
-    const goalType =
-      item.goalType === "savings" || item.goalType === "weight"
+    const goalTypeRaw =
+      item.goalType === "financial" ||
+      item.goalType === "savings" ||
+      item.goalType === "weight"
         ? item.goalType
         : undefined;
+    const goalType =
+      goalTypeRaw === "savings"
+        ? "financial"
+        : goalTypeRaw === "financial" || goalTypeRaw === "weight"
+          ? goalTypeRaw
+          : undefined;
     const goalTarget =
       typeof item.goalTarget === "number" && Number.isFinite(item.goalTarget)
         ? item.goalTarget

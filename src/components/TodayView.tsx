@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   Plus,
   Check,
@@ -38,6 +38,7 @@ import Celebration from "./Celebration";
 import HeroPlanner from "./HeroPlanner";
 import HeroInfo from "./HeroInfo";
 import ProgressRing from "./ProgressRing";
+import TaskTitle from "./TaskTitle";
 
 type Props = {
   state: AppState;
@@ -91,6 +92,171 @@ function streakMascotSrc(days: number): string {
   if (days >= 3) return "/sprout-streak-3.png";
   if (days >= 1) return "/sprout-streak-1.png";
   return "/sprout-streak.png";
+}
+
+type HeroMascotStageProps = {
+  allDone: boolean;
+  streakMascot: string;
+  streakDays: number;
+  displayPct: number;
+  status: DayStatus;
+  done: number;
+  total: number;
+  t: TFn;
+};
+
+const HERO_FLOAT_SEEDS = [
+  { src: "/sprout-logo.png", className: "left-[2%] top-[6%]", size: 26, dur: "5.2s", delay: "0s" },
+  { src: "/sprout-head-happy.png", className: "right-[0%] top-[10%]", size: 24, dur: "6s", delay: "0.35s" },
+  { src: "/sprout-progress.png", className: "bottom-[14%] left-[4%]", size: 22, dur: "5.6s", delay: "0.7s" },
+  { src: "/sprout-head-happy.png", className: "bottom-[10%] right-[6%]", size: 24, dur: "5.9s", delay: "1s" },
+] as const;
+
+function HeroMascotStage({
+  allDone,
+  streakMascot,
+  streakDays,
+  displayPct,
+  status,
+  done,
+  total,
+  t,
+}: HeroMascotStageProps) {
+  if (allDone) {
+    return (
+      <div className="flex w-full max-w-[18rem] flex-col items-center gap-4 sm:max-w-xs">
+        <div className="relative flex h-64 w-64 items-center justify-center sm:h-72 sm:w-72">
+          {[0, 1].map((ring) => (
+            <span
+              key={ring}
+              aria-hidden="true"
+              className="hero-pulse-ring pointer-events-none absolute inset-0 m-auto rounded-full border-2 border-amber-300/50 dark:border-amber-400/35"
+              style={{ animationDelay: `${ring * 1.1}s` }}
+            />
+          ))}
+          <span
+            aria-hidden="true"
+            className="complete-rays absolute inset-0 m-auto h-[88%] w-[88%] rounded-full blur-lg"
+            style={{
+              background:
+                "conic-gradient(from 0deg, rgba(251,191,36,0), rgba(251,191,36,0.55), rgba(34,197,94,0), rgba(34,197,94,0.5), rgba(251,191,36,0), rgba(251,191,36,0.55), rgba(34,197,94,0))",
+            }}
+          />
+          <span
+            aria-hidden="true"
+            className="complete-aura absolute inset-0 m-auto h-[78%] w-[78%] rounded-full bg-amber-300/55 blur-2xl dark:bg-amber-400/35"
+          />
+          {HERO_FLOAT_SEEDS.map((seed, i) => (
+            <img
+              key={i}
+              src={seed.src}
+              alt=""
+              aria-hidden="true"
+              decoding="async"
+              draggable={false}
+              className={`hero-seed-float pointer-events-none absolute object-contain drop-shadow-[0_8px_16px_rgba(245,158,11,0.25)] ${seed.className}`}
+              style={
+                {
+                  width: seed.size,
+                  height: seed.size,
+                  "--seed-dur": seed.dur,
+                  "--seed-delay": seed.delay,
+                } as CSSProperties
+              }
+            />
+          ))}
+          <img
+            src="/sprout-success.png"
+            alt=""
+            aria-hidden="true"
+            decoding="async"
+            draggable={false}
+            className="celebration-hop-loop relative z-10 h-[74%] w-[74%] object-contain drop-shadow-[0_24px_48px_rgba(245,158,11,0.45)]"
+          />
+        </div>
+
+        <div
+          role="status"
+          className="hero-badge-rise w-full rounded-2xl border border-amber-200/90 bg-gradient-to-b from-amber-50/98 to-amber-100/70 px-4 py-3 text-center shadow-[0_16px_40px_rgba(245,158,11,0.18)] backdrop-blur-sm dark:border-amber-800/80 dark:from-amber-950/95 dark:to-amber-900/50"
+        >
+          <p className="inline-flex items-center justify-center gap-1.5 text-sm font-bold text-amber-700 dark:text-amber-200">
+            <Sparkles
+              size={15}
+              aria-hidden="true"
+              className="animate-sparkle shrink-0 text-amber-500 dark:text-amber-300"
+            />
+            {t("today.allDoneTitle")}
+          </p>
+          <p className="mt-1 text-balance text-xs font-semibold leading-relaxed text-amber-600/90 dark:text-amber-300/85">
+            {t("today.allDoneSubtitle")}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative mx-auto flex h-64 w-64 shrink-0 items-center justify-center sm:h-72 sm:w-72">
+          <span
+            aria-hidden="true"
+            className="absolute inset-0 m-auto h-[75%] w-[75%] rounded-full bg-sprout-200/55 blur-3xl dark:bg-sprout-600/25"
+          />
+          <span
+            aria-hidden="true"
+            className="absolute right-[18%] top-[12%] h-16 w-16 rounded-full bg-amber-300/40 blur-2xl dark:bg-amber-500/25"
+          />
+          <img
+            src={streakMascot}
+            alt=""
+            aria-hidden="true"
+            decoding="async"
+            draggable={false}
+            className="relative h-[72%] w-[72%] object-contain drop-shadow-[0_22px_34px_rgba(22,101,52,0.2)]"
+            style={{ animation: "streak-float 4.8s ease-in-out infinite" }}
+          />
+          <div
+            className="absolute right-0 top-3 sm:right-1"
+            style={{ animation: "streak-float 5.4s ease-in-out 0.5s infinite" }}
+          >
+            <div className="flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50/95 px-3 py-2 shadow-[0_18px_40px_-14px_rgba(245,158,11,0.5)] backdrop-blur-sm dark:border-amber-800 dark:bg-amber-950/90">
+              <Flame
+                size={20}
+                fill="currentColor"
+                aria-hidden="true"
+                className="text-amber-500 dark:text-amber-300"
+              />
+              <div className="leading-tight">
+                <span className="block font-sans text-xl font-bold leading-none tabular-nums text-amber-600 dark:text-amber-300">
+                  {streakDays}
+                </span>
+                <span className="mt-0.5 block text-[10px] font-bold uppercase tracking-wide text-amber-700/80 dark:text-amber-200/80">
+                  {t("unit.dayShort")}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div
+            className="absolute bottom-2 left-0 sm:left-1"
+            style={{ animation: "streak-float 5.8s ease-in-out 0.9s infinite" }}
+          >
+            <div className="flex items-center gap-2.5 rounded-2xl border border-sprout-100 bg-surface/95 px-3 py-2 shadow-[0_18px_40px_-14px_rgba(22,101,52,0.32)] backdrop-blur-sm dark:border-sprout-900 dark:bg-surface-dark-muted/95">
+              <ProgressRing pct={displayPct} status={status} size={44}>
+                <span className="font-sans text-[10px] font-bold tabular-nums text-ink dark:text-surface">
+                  {displayPct}
+                </span>
+              </ProgressRing>
+              <div className="leading-tight">
+                <span className="block font-sans text-sm font-bold leading-none tabular-nums text-sprout-700 dark:text-sprout-300">
+                  {t("today.count", { done, total })}
+                </span>
+                <span className="mt-0.5 block text-[10px] font-bold uppercase tracking-wide text-ink-subtle dark:text-surface-muted">
+                  {t("day.today")}
+                </span>
+              </div>
+            </div>
+          </div>
+    </div>
+  );
 }
 
 export default function TodayView({ state, setState }: Props) {
@@ -206,7 +372,7 @@ export default function TodayView({ state, setState }: Props) {
                 : "text-ink dark:text-surface"
             }`}
           >
-            {task.title}
+            <TaskTitle task={task} />
           </span>
         </button>
           <button
@@ -226,7 +392,11 @@ export default function TodayView({ state, setState }: Props) {
       <Celebration burstKey={burst} />
 
       {/* ── Progression hero ─────────────────────────────────────────── */}
-      <section className="relative flex min-h-[calc(100dvh-4.5rem)] w-full flex-col items-center justify-center overflow-hidden px-6 py-10 lg:min-h-dvh lg:py-12">
+      <section
+        className={`relative flex min-h-[calc(100dvh-4.5rem)] w-full flex-col items-center justify-center overflow-hidden px-6 py-10 lg:min-h-dvh lg:py-12 ${
+          allDone && !zen ? "hero-complete-section" : ""
+        }`}
+      >
         <HeroInfo />
         <div
           aria-hidden="true"
@@ -240,16 +410,16 @@ export default function TodayView({ state, setState }: Props) {
           }}
         />
 
-        <div className="relative z-10 grid w-full max-w-5xl items-center gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
-          {/* Content — date, status, quote, actions */}
-          <div className="order-2 flex w-full flex-col items-center text-center lg:order-1 lg:items-start lg:text-left">
+        <div className="relative z-10 mx-auto grid w-full max-w-5xl items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)] lg:gap-12">
+          {/* Copy — left on desktop, below mascot on mobile */}
+          <div className="order-2 flex w-full min-w-0 flex-col items-center text-center lg:order-1 lg:items-start lg:text-left">
             <p className="text-xs font-semibold uppercase tracking-wide text-ink-subtle dark:text-surface-muted">
               {formatDayLabel(today, locale)}
             </p>
             <p className="mt-1.5 text-balance text-sm font-semibold text-sprout-700 dark:text-sprout-300 sm:text-base">
               {t(stage.key)}
             </p>
-            <figure className="mt-2 max-w-md">
+            <figure className="mt-2 w-full max-w-md">
               <blockquote className="text-balance font-sans text-2xl font-bold leading-snug tracking-tight text-ink dark:text-surface sm:text-3xl">
                 <span className="text-sprout-400 dark:text-sprout-500">“</span>
                 {motivation}
@@ -283,112 +453,19 @@ export default function TodayView({ state, setState }: Props) {
             </div>
           </div>
 
-          {!zen && allDone && (
-            <div className="order-1 flex justify-center lg:order-2 lg:justify-end">
-              {/* All tasks done — a big, happy, celebrating sprout in a
-                  radiant aura, on top of the existing seed-burst. */}
-              <div className="relative flex h-72 w-72 items-center justify-center sm:h-80 sm:w-80 lg:h-[22rem] lg:w-[22rem]">
-                <span
-                  aria-hidden="true"
-                  className="complete-rays absolute h-60 w-60 rounded-full blur-md sm:h-72 sm:w-72"
-                  style={{
-                    background:
-                      "conic-gradient(from 0deg, rgba(251,191,36,0), rgba(251,191,36,0.55), rgba(34,197,94,0), rgba(34,197,94,0.5), rgba(251,191,36,0), rgba(251,191,36,0.55), rgba(34,197,94,0))",
-                  }}
-                />
-                <span
-                  aria-hidden="true"
-                  className="complete-aura absolute h-52 w-52 rounded-full bg-amber-300/55 blur-2xl dark:bg-amber-400/35 sm:h-64 sm:w-64"
-                />
-                <img
-                  src="/sprout-success.png"
-                  alt=""
-                  aria-hidden="true"
-                  decoding="async"
-                  draggable={false}
-                  className="complete-cheer relative h-60 w-60 object-contain drop-shadow-[0_22px_44px_rgba(245,158,11,0.45)] sm:h-72 sm:w-72"
-                />
-                <div className="absolute -bottom-1 inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50/95 px-4 py-1.5 text-sm font-bold text-amber-700 shadow-[0_16px_36px_rgba(245,158,11,0.22)] dark:border-amber-800 dark:bg-amber-950/90 dark:text-amber-200">
-                  <Sparkles
-                    size={15}
-                    aria-hidden="true"
-                    className="animate-sparkle text-amber-500 dark:text-amber-300"
-                  />
-                  {t("today.allDone")}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {!zen && !allDone && (
-            <div className="order-1 flex justify-center lg:order-2 lg:justify-end">
-              <div className="relative flex h-64 w-64 items-center justify-center sm:h-72 sm:w-72">
-                {/* Soft layered glows — green base + a warm streak ember. */}
-                <span
-                  aria-hidden="true"
-                  className="absolute h-48 w-48 rounded-full bg-sprout-200/55 blur-3xl dark:bg-sprout-600/25"
-                />
-                <span
-                  aria-hidden="true"
-                  className="absolute right-8 top-10 h-16 w-16 rounded-full bg-amber-300/40 blur-2xl dark:bg-amber-500/25"
-                />
-
-                {/* Living centerpiece — the streak sprout, gently floating. */}
-                <img
-                  src={streakMascot}
-                  alt=""
-                  aria-hidden="true"
-                  decoding="async"
-                  draggable={false}
-                  className="relative h-48 w-48 object-contain drop-shadow-[0_22px_34px_rgba(22,101,52,0.2)] sm:h-56 sm:w-56"
-                  style={{ animation: "streak-float 4.8s ease-in-out infinite" }}
-                />
-
-                {/* Floating chip — streak flame + day count. */}
-                <div
-                  className="absolute -right-1 top-5 sm:-right-3"
-                  style={{ animation: "streak-float 5.4s ease-in-out 0.5s infinite" }}
-                >
-                  <div className="flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50/95 px-3 py-2 shadow-[0_18px_40px_-14px_rgba(245,158,11,0.5)] backdrop-blur-sm dark:border-amber-800 dark:bg-amber-950/90">
-                    <Flame
-                      size={20}
-                      fill="currentColor"
-                      aria-hidden="true"
-                      className="text-amber-500 dark:text-amber-300"
-                    />
-                    <div className="leading-tight">
-                      <span className="block font-sans text-xl font-bold leading-none tabular-nums text-amber-600 dark:text-amber-300">
-                        {streakDays}
-                      </span>
-                      <span className="mt-0.5 block text-[10px] font-bold uppercase tracking-wide text-amber-700/80 dark:text-amber-200/80">
-                        {t("unit.dayShort")}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Floating chip — today's live completion ring. */}
-                <div
-                  className="absolute -left-2 bottom-6 sm:-left-4"
-                  style={{ animation: "streak-float 5.8s ease-in-out 0.9s infinite" }}
-                >
-                  <div className="flex items-center gap-2.5 rounded-2xl border border-sprout-100 bg-surface/95 px-3 py-2 shadow-[0_18px_40px_-14px_rgba(22,101,52,0.32)] backdrop-blur-sm dark:border-sprout-900 dark:bg-surface-dark-muted/95">
-                    <ProgressRing pct={displayPct} status={status} size={44}>
-                      <span className="font-sans text-[10px] font-bold tabular-nums text-ink dark:text-surface">
-                        {displayPct}
-                      </span>
-                    </ProgressRing>
-                    <div className="leading-tight">
-                      <span className="block font-sans text-sm font-bold leading-none tabular-nums text-sprout-700 dark:text-sprout-300">
-                        {t("today.count", { done, total })}
-                      </span>
-                      <span className="mt-0.5 block text-[10px] font-bold uppercase tracking-wide text-ink-subtle dark:text-surface-muted">
-                        {t("day.today")}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          {/* Mascot — centered in its column; above copy on mobile */}
+          {!zen && (
+            <div className="order-1 flex w-full justify-center lg:order-2">
+              <HeroMascotStage
+                allDone={allDone}
+                streakMascot={streakMascot}
+                streakDays={streakDays}
+                displayPct={displayPct}
+                status={status}
+                done={done}
+                total={total}
+                t={t}
+              />
             </div>
           )}
         </div>
@@ -561,7 +638,7 @@ export default function TodayView({ state, setState }: Props) {
               decoding="async"
               className={`relative h-20 w-20 object-contain ${
                 allDone
-                  ? "complete-cheer drop-shadow-[0_14px_26px_rgba(245,158,11,0.4)]"
+                  ? "celebration-hop-loop drop-shadow-[0_14px_26px_rgba(245,158,11,0.4)]"
                   : "animate-bloom drop-shadow-[0_12px_22px_rgba(22,101,52,0.18)]"
               }`}
               style={
@@ -607,9 +684,8 @@ export default function TodayView({ state, setState }: Props) {
               )}
             </div>
             {allDone && (
-              <p className="mt-1 inline-flex items-center gap-1.5 text-sm font-bold text-amber-600 dark:text-amber-400">
-                <Sparkles size={15} aria-hidden="true" className="animate-sparkle" />
-                {t("today.allDone")}
+              <p className="mt-1 text-sm font-bold text-amber-600 dark:text-amber-400">
+                {t("today.allDoneTitle")}
               </p>
             )}
             <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-sprout-100 dark:bg-sprout-950">

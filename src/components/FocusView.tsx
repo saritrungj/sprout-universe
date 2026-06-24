@@ -6,6 +6,7 @@ import {
   getDayTaskIds,
 } from "../lib/store";
 import { todayISO } from "../lib/dates";
+import { cleanGoalTaskTitle } from "../lib/goals";
 import { useT } from "../lib/i18n";
 
 type Props = {
@@ -38,10 +39,11 @@ export default function FocusView({ state, setState }: Props) {
     .filter((session) => session.mode === "focus")
     .reduce((sum, session) => sum + session.minutes, 0);
 
-  const selectedTask = useMemo(
-    () => (taskId ? state.tasks[taskId]?.title : ""),
-    [state.tasks, taskId],
-  );
+  const selectedTask = useMemo(() => {
+    const task = taskId ? state.tasks[taskId] : undefined;
+    if (!task) return "";
+    return task.goalTitle ?? cleanGoalTaskTitle(task.title);
+  }, [state.tasks, taskId]);
 
   useEffect(() => {
     setSecondsLeft((phase === "focus" ? focusMinutes : breakMinutes) * 60);
@@ -208,11 +210,17 @@ export default function FocusView({ state, setState }: Props) {
                 className="min-h-[44px] rounded-xl border border-sprout-100 bg-surface-muted px-3 py-2 text-sm dark:border-sprout-900 dark:bg-surface-dark"
               >
                 <option value="">{t("focus.noTask")}</option>
-                {taskIds.map((id) => (
-                  <option key={id} value={id}>
-                    {state.tasks[id]?.title}
-                  </option>
-                ))}
+                {taskIds.map((id) => {
+                  const task = state.tasks[id];
+                  const label = task
+                    ? task.goalTitle ?? cleanGoalTaskTitle(task.title)
+                    : "";
+                  return (
+                    <option key={id} value={id}>
+                      {label}
+                    </option>
+                  );
+                })}
               </select>
             </label>
             <NumberField label={t("focus.focusMinutes")} value={focusMinutes} onChange={setFocusMinutes} />

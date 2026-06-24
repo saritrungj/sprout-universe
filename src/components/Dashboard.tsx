@@ -5,21 +5,13 @@ import {
   Loader2,
   Smartphone,
   Monitor,
-  Plus,
-  Check,
-  Trash2,
-  Target,
+  ChevronRight,
   Timer,
   Smile,
 } from "lucide-react";
 import {
   AppState,
-  GoalType,
-  GoalConfig,
   MoodKey,
-  addDayTask,
-  removeTask,
-  setGoalEntry,
 } from "../lib/store";
 import {
   currentMonth,
@@ -53,9 +45,12 @@ import Heatmap from "./Heatmap";
 import StreakCard from "./StreakCard";
 import LoadingOverlay from "./LoadingOverlay";
 
-type Props = { state: AppState; setState: (s: AppState) => void };
+type Props = {
+  state: AppState;
+  onOpenGoals?: () => void;
+};
 
-export default function Dashboard({ state, setState }: Props) {
+export default function Dashboard({ state, onOpenGoals }: Props) {
   const { t, locale } = useT();
   const zen = state.settings.zenMode;
   const exportRef = useRef<HTMLDivElement>(null);
@@ -148,7 +143,7 @@ export default function Dashboard({ state, setState }: Props) {
       title: goal.title,
       percent: goal.percent,
       meta: `${formatGoalNumber(goal.current)} / ${formatGoalNumber(goal.target)} ${
-        goal.type === "savings" ? t("goal.currency") : t("goal.kg")
+        goal.type === "financial" ? t("goal.currency") : t("goal.kg")
       }`,
     }));
 
@@ -274,12 +269,7 @@ export default function Dashboard({ state, setState }: Props) {
 
         <div className="grid min-w-0 gap-4 lg:hidden">
           <StatsRow stats={stats} streak={streak} zen={zen} t={t} />
-          <GoalForecastPanel
-            goals={goals}
-            state={state}
-            setState={setState}
-            t={t}
-          />
+          <GoalSummaryPanel goals={goals} t={t} onOpenGoals={onOpenGoals} />
           <Heatmap cells={heatmap} />
           {!zen && <StreakCard streak={streak} todayPending={todayPending} />}
         </div>
@@ -294,12 +284,7 @@ export default function Dashboard({ state, setState }: Props) {
           </div>
 
           <aside className="min-w-0">
-            <GoalForecastPanel
-              goals={goals}
-              state={state}
-              setState={setState}
-              t={t}
-            />
+            <GoalSummaryPanel goals={goals} t={t} onOpenGoals={onOpenGoals} />
           </aside>
         </div>
           </div>
@@ -524,156 +509,43 @@ function MoodCard({ state, t }: { state: AppState; t: TFn }) {
   );
 }
 
-function GoalForecastPanel({
+function GoalSummaryPanel({
   goals,
-  state,
-  setState,
   t,
+  onOpenGoals,
 }: {
   goals: ReturnType<typeof getGoalProgress>;
-  state: AppState;
-  setState: (s: AppState) => void;
   t: TFn;
+  onOpenGoals?: () => void;
 }) {
-  const [showForm, setShowForm] = useState(false);
-  const [gtype, setGtype] = useState<GoalType>("savings");
-  const [title, setTitle] = useState("");
-  const [target, setTarget] = useState("");
-  const [start, setStart] = useState("");
-  const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
-  const [logDrafts, setLogDrafts] = useState<Record<string, string>>({});
-
-  const unit = (type: GoalType) =>
-    type === "savings" ? t("goal.currency") : t("goal.kg");
-
-  function createGoal(e: React.FormEvent) {
-    e.preventDefault();
-    const tgt = Number(target);
-    if (!title.trim() || !Number.isFinite(tgt) || tgt <= 0) return;
-    let config: GoalConfig;
-    if (gtype === "weight") {
-      const st = Number(start);
-      const base = Number.isFinite(st) && st > 0 ? st : tgt;
-      config = {
-        target: tgt,
-        start: base,
-        direction: tgt < base ? "loss" : "gain",
-        checkEveryDays: 7,
-      };
-    } else {
-      config = { target: tgt };
-    }
-    const [next] = addDayTask(state, todayISO(), title.trim(), {
-      asTemplate: true,
-      goalType: gtype,
-      goalConfig: config,
-    });
-    setState(next);
-    setTitle("");
-    setTarget("");
-    setStart("");
-    setShowForm(false);
-  }
-
-  function logToday(taskId: string) {
-    const value = Number(logDrafts[taskId]);
-    if (!Number.isFinite(value) || logDrafts[taskId] === "") return;
-    setState(setGoalEntry(state, todayISO(), taskId, value));
-    setLogDrafts((drafts) => ({ ...drafts, [taskId]: "" }));
-  }
-
-  const fieldCls =
-    "min-h-[44px] w-full min-w-0 rounded-xl border border-sprout-100 bg-surface px-3 text-sm text-ink placeholder-ink-subtle focus:border-sprout-400 dark:border-sprout-900 dark:bg-surface-dark dark:text-surface dark:placeholder-surface-muted";
+  const unit = (type: "financial" | "weight") =>
+    type === "financial" ? t("goal.currency") : t("goal.kg");
 
   return (
     <section className="min-w-0">
       <div className="mb-2 flex items-start justify-between gap-2 px-1">
         <div className="min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-subtle dark:text-surface-muted">
-            {t("goal.section")}
+            {t("dash.goalsSection")}
           </p>
           <p className="mt-0.5 text-xs leading-relaxed text-ink-muted dark:text-surface-muted">
-            {t("goal.sectionHint")}
+            {t("dash.goalsHint")}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowForm((v) => !v)}
-          aria-expanded={showForm}
-          className="inline-flex min-h-[36px] flex-none items-center gap-1.5 rounded-full border border-sprout-200 bg-surface px-3 text-xs font-semibold text-sprout-700 transition-colors hover:bg-sprout-50 dark:border-sprout-800 dark:bg-surface-dark-muted dark:text-sprout-300 dark:hover:bg-sprout-950"
-        >
-          <Plus size={14} aria-hidden="true" />
-          {t("goal.setCta")}
-        </button>
+        {onOpenGoals && (
+          <button
+            type="button"
+            onClick={onOpenGoals}
+            className="inline-flex min-h-[36px] flex-none items-center gap-1 rounded-full border border-sprout-200 bg-surface px-3 text-xs font-semibold text-sprout-700 transition-colors hover:bg-sprout-50 dark:border-sprout-800 dark:bg-surface-dark-muted dark:text-sprout-300 dark:hover:bg-sprout-950"
+          >
+            {t("dash.openGoals")}
+            <ChevronRight size={14} aria-hidden="true" />
+          </button>
+        )}
       </div>
 
-      {showForm && (
-        <form
-          onSubmit={createGoal}
-          className="animate-pop-in mb-3 grid gap-2 rounded-2xl border border-sprout-100 bg-surface p-3 dark:border-sprout-900 dark:bg-surface-dark-muted"
-        >
-          <div className="flex rounded-full border border-sprout-100 bg-surface-muted p-1 dark:border-sprout-900 dark:bg-surface-dark">
-            <TypeChip
-              active={gtype === "savings"}
-              onClick={() => setGtype("savings")}
-              label={t("goal.savings")}
-            />
-            <TypeChip
-              active={gtype === "weight"}
-              onClick={() => setGtype("weight")}
-              label={t("goal.weight")}
-            />
-          </div>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder={t("goal.titlePlaceholder")}
-            aria-label={t("goal.titlePlaceholder")}
-            className={fieldCls}
-          />
-          <div className="grid grid-cols-2 gap-2">
-            {gtype === "weight" && (
-              <input
-                type="number"
-                inputMode="decimal"
-                value={start}
-                onChange={(e) => setStart(e.target.value)}
-                placeholder={`${t("goal.startWeight")} (${unit(gtype)})`}
-                aria-label={t("goal.startWeight")}
-                className={fieldCls}
-              />
-            )}
-            <input
-              type="number"
-              inputMode="decimal"
-              value={target}
-              onChange={(e) => setTarget(e.target.value)}
-              placeholder={`${t("goal.target")} (${unit(gtype)})`}
-              aria-label={t("goal.target")}
-              className={`${fieldCls} ${gtype === "weight" ? "" : "col-span-2"}`}
-            />
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl bg-sprout-600 px-4 text-sm font-bold text-white transition-colors hover:bg-sprout-700"
-            >
-              <Target size={15} aria-hidden="true" />
-              {t("goal.create")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowForm(false)}
-              className="inline-flex min-h-[44px] items-center justify-center rounded-xl px-4 text-sm font-semibold text-ink-muted transition-colors hover:bg-surface-muted dark:text-surface-muted dark:hover:bg-surface-dark"
-            >
-              {t("goal.cancel")}
-            </button>
-          </div>
-        </form>
-      )}
-
       {goals.length === 0 ? (
-        <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-dashed border-sprout-200 bg-surface px-4 py-3 dark:border-sprout-900 dark:bg-surface-dark-muted">
+        <div className="flex min-w-0 flex-col items-center gap-3 rounded-2xl border border-dashed border-sprout-200 bg-surface px-4 py-6 text-center dark:border-sprout-900 dark:bg-surface-dark-muted">
           <img
             src="/sprout-finance.png"
             alt=""
@@ -682,12 +554,22 @@ function GoalForecastPanel({
           />
           <div className="min-w-0">
             <h3 className="text-sm font-bold text-ink dark:text-surface">
-              {t("goal.emptyTitle")}
+              {t("dash.goalsEmptyTitle")}
             </h3>
             <p className="mt-0.5 text-xs leading-relaxed text-ink-muted dark:text-surface-muted">
-              {t("goal.emptyBody")}
+              {t("dash.goalsEmptyBody")}
             </p>
           </div>
+          {onOpenGoals && (
+            <button
+              type="button"
+              onClick={onOpenGoals}
+              className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl bg-sprout-600 px-4 text-xs font-semibold text-white hover:bg-sprout-700"
+            >
+              {t("dash.openGoals")}
+              <ChevronRight size={14} aria-hidden="true" />
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-1">
@@ -699,59 +581,18 @@ function GoalForecastPanel({
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-xs font-medium uppercase tracking-wide text-ink-subtle dark:text-surface-muted">
-                    {goal.type === "savings"
-                      ? t("goal.savings")
+                    {goal.type === "financial"
+                      ? t("goal.financial")
                       : t("goal.weight")}
                   </p>
                   <h3 className="mt-0.5 line-clamp-2 text-sm font-bold text-ink dark:text-surface">
                     {goal.title}
                   </h3>
                 </div>
-                <div className="flex flex-none items-center gap-2">
-                  <p className="text-xl font-bold tabular-nums text-sprout-600 dark:text-sprout-400">
-                    {goal.percent}%
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setConfirmRemove(
-                        confirmRemove === goal.taskId ? null : goal.taskId,
-                      )
-                    }
-                    aria-label={t("goal.remove")}
-                    className="flex h-8 w-8 items-center justify-center rounded-full text-ink-subtle transition-colors hover:bg-red-50 hover:text-red-500 dark:text-surface-muted dark:hover:bg-red-950 dark:hover:text-red-400"
-                  >
-                    <Trash2 size={15} aria-hidden="true" />
-                  </button>
-                </div>
+                <p className="text-xl font-bold tabular-nums text-sprout-600 dark:text-sprout-400">
+                  {goal.percent}%
+                </p>
               </div>
-
-              {confirmRemove === goal.taskId && (
-                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 dark:border-red-900/60 dark:bg-red-950/30">
-                  <span className="text-xs font-medium text-red-700 dark:text-red-300">
-                    {t("goal.removeConfirm")}
-                  </span>
-                  <span className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setState(removeTask(state, goal.taskId));
-                        setConfirmRemove(null);
-                      }}
-                      className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
-                    >
-                      {t("goal.remove")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmRemove(null)}
-                      className="rounded-lg px-3 py-1.5 text-xs font-semibold text-ink-muted hover:bg-surface-muted dark:text-surface-muted dark:hover:bg-surface-dark"
-                    >
-                      {t("goal.cancel")}
-                    </button>
-                  </span>
-                </div>
-              )}
 
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-sprout-100 dark:bg-sprout-950">
                 <div
@@ -787,35 +628,6 @@ function GoalForecastPanel({
                 />
               </div>
 
-              {/* Quick log today's value */}
-              <div className="mt-2 flex gap-2">
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  value={logDrafts[goal.taskId] ?? ""}
-                  onChange={(e) =>
-                    setLogDrafts((d) => ({ ...d, [goal.taskId]: e.target.value }))
-                  }
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      logToday(goal.taskId);
-                    }
-                  }}
-                  placeholder={`${t("goal.logToday")} (${unit(goal.type)})`}
-                  aria-label={t("goal.logToday")}
-                  className="min-h-[40px] min-w-0 flex-1 rounded-xl border border-sprout-100 bg-surface-muted px-3 text-sm text-ink placeholder-ink-subtle focus:border-sprout-400 dark:border-sprout-900 dark:bg-surface-dark dark:text-surface dark:placeholder-surface-muted"
-                />
-                <button
-                  type="button"
-                  onClick={() => logToday(goal.taskId)}
-                  aria-label={t("goal.logCta")}
-                  className="flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl bg-sprout-600 text-white transition-colors hover:bg-sprout-700"
-                >
-                  <Check size={16} aria-hidden="true" />
-                </button>
-              </div>
-
               {goal.nextCheckDate && (
                 <p className="mt-2 text-[11px] text-ink-subtle dark:text-surface-muted">
                   {t("goal.nextCheck", { date: goal.nextCheckDate })}
@@ -826,31 +638,6 @@ function GoalForecastPanel({
         </div>
       )}
     </section>
-  );
-}
-
-function TypeChip({
-  active,
-  onClick,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={`inline-flex min-h-[36px] flex-1 items-center justify-center rounded-full px-3 text-xs font-bold transition-all ${
-        active
-          ? "bg-surface text-sprout-700 shadow-sm dark:bg-surface-dark-muted dark:text-sprout-300"
-          : "text-ink-subtle dark:text-surface-muted"
-      }`}
-    >
-      {label}
-    </button>
   );
 }
 
